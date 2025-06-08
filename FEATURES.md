@@ -1,8 +1,10 @@
-[ ] Authentication
+[x] Authentication
 [ ] Multiple models
 [ ] Instead of showing models, we'll have a "noob support" where people will
 pick the category/or AI will decide the best model to go to.
 [ ] Enhance prompt via Gemini 2.0 flash
+  - Save the original input, allow retries and 
+[ ] The initial input should be saved across devices
 [ ] Chat history
 [ ] Synchronization on streaming response
   - I think Convex communicates directly with the API instead of going 
@@ -24,3 +26,12 @@ pick the category/or AI will decide the best model to go to.
 [ ] Custom themes (inspired by IDE themes)
 [ ] Full keyboard support (model selection) with react-hotkeys-hook
 [ ] Billing support with Clerk Billing
+
+---
+
+Pages/Blocks
+[x] Sign in
+[x] Sign up
+[ ] Chat
+[ ] Chat/ID
+[ ]
