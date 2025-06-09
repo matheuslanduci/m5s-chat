@@ -3,6 +3,8 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
+import { ThemeProvider } from './components/theme-provider'
+import { Toaster } from './components/ui/sonner'
 import { convex } from './lib/convex.ts'
 import { env } from './lib/env.ts'
 import reportWebVitals from './reportWebVitals.ts'
@@ -37,12 +39,15 @@ function App() {
 
   return (
     <StrictMode>
-      <RouterProvider
-        router={router}
-        context={{
-          user
-        }}
-      />
+      <ThemeProvider defaultTheme="system" storageKey="m5s-chat-theme">
+        <RouterProvider
+          router={router}
+          context={{
+            user
+          }}
+        />
+        <Toaster />
+      </ThemeProvider>
     </StrictMode>
   )
 }

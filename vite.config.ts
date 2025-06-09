@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-
+import fs from 'node:fs'
 import { resolve } from 'node:path'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 
@@ -15,6 +15,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')
+    }
+  },
+  server: {
+    https: {
+      key: fs.readFileSync("./localhost+3-key.pem"),
+      cert: fs.readFileSync("./localhost+3.pem"),
     }
   }
 })

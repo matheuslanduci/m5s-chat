@@ -13,6 +13,7 @@ import type * as chat from "../chat.js";
 import type * as error from "../error.js";
 import type * as http from "../http.js";
 import type * as model from "../model.js";
+import type * as userPreference from "../userPreference.js";
 
 import type {
   ApiFromModules,
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   error: typeof error;
   http: typeof http;
   model: typeof model;
+  userPreference: typeof userPreference;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

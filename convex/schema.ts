@@ -37,9 +37,11 @@ export default defineSchema({
   userPreference: defineTable({
     userId: v.string(),
     theme: v.optional(v.string()),
+    savedPrompt: v.optional(v.string()),
     generalPrompt: v.optional(v.string()),
     favoriteModel: v.optional(v.id('model')),
     favoriteCategory: v.optional(category),
+    isAuto: v.optional(v.boolean()),
     uncategorized: v.optional(v.boolean()),
     autoSummarize: v.optional(v.boolean())
   }).index('byUserId', ['userId']),
