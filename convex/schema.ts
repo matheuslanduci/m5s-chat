@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
-const category = v.union(
+export const category = v.union(
   v.literal('Programming'),
   v.literal('Roleplay'),
   v.literal('Marketing'),
@@ -20,7 +20,7 @@ export default defineSchema({
   bestModel: defineTable({
     category,
     model: v.id('model')
-  }),
+  }).index('byCategory', ['category']),
   model: defineTable({
     name: v.string(),
     provider: v.union(
@@ -46,15 +46,19 @@ export default defineSchema({
   chat: defineTable({
     userId: v.string(),
     selectedModel: v.id('model'),
-    title: v.string(),
+    title: v.optional(v.string()),
     pinned: v.boolean(),
-    contextLength: v.number()
-  }).index('byUserId', ['userId']),
+    streamId: v.optional(v.string()),
+    contextLength: v.optional(v.number()),
+    initialPrompt: v.optional(v.string())
+  })
+    .index('byUserId', ['userId'])
+    .index('byStreamIdAndUserId', ['streamId', 'userId']),
   message: defineTable({
     verticalIndex: v.number(), // For ordering messages in a chat
     horizontalIndex: v.number(), // For ordering retried messages
     chatId: v.id('chat'),
-    userId: v.string(),
+    userId: v.optional(v.string()),
     role: v.union(v.literal('user'), v.literal('assistant')),
     tokens: v.number(),
     content: v.string(),

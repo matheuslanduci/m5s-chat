@@ -8,6 +8,12 @@
  * @module
  */
 
+import type * as ai from "../ai.js";
+import type * as chat from "../chat.js";
+import type * as error from "../error.js";
+import type * as http from "../http.js";
+import type * as model from "../model.js";
+
 import type {
   ApiFromModules,
   FilterApi,
@@ -22,12 +28,58 @@ import type {
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  ai: typeof ai;
+  chat: typeof chat;
+  error: typeof error;
+  http: typeof http;
+  model: typeof model;
+}>;
+declare const fullApiWithMounts: typeof fullApi;
+
 export declare const api: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "public">
 >;
 export declare const internal: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {
+  persistentTextStreaming: {
+    lib: {
+      addChunk: FunctionReference<
+        "mutation",
+        "internal",
+        { final: boolean; streamId: string; text: string },
+        any
+      >;
+      createStream: FunctionReference<"mutation", "internal", {}, any>;
+      getStreamStatus: FunctionReference<
+        "query",
+        "internal",
+        { streamId: string },
+        "pending" | "streaming" | "done" | "error" | "timeout"
+      >;
+      getStreamText: FunctionReference<
+        "query",
+        "internal",
+        { streamId: string },
+        {
+          status: "pending" | "streaming" | "done" | "error" | "timeout";
+          text: string;
+        }
+      >;
+      setStreamStatus: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          status: "pending" | "streaming" | "done" | "error" | "timeout";
+          streamId: string;
+        },
+        any
+      >;
+    };
+  };
+};

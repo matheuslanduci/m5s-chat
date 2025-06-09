@@ -26,6 +26,8 @@ pick the category/or AI will decide the best model to go to.
 [ ] Custom themes (inspired by IDE themes)
 [ ] Full keyboard support (model selection) with react-hotkeys-hook
 [ ] Billing support with Clerk Billing
+[ ] Change title of the chat manually or regenerate with AI
+[ ] Support Reasoning
 
 ---
 
