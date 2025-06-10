@@ -9,6 +9,7 @@
  */
 
 import type * as ai from "../ai.js";
+import type * as attachment from "../attachment.js";
 import type * as chat from "../chat.js";
 import type * as error from "../error.js";
 import type * as http from "../http.js";
@@ -31,6 +32,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
+  attachment: typeof attachment;
   chat: typeof chat;
   error: typeof error;
   http: typeof http;

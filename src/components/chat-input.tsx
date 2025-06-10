@@ -1,3 +1,5 @@
+import { AttachmentPreview } from '@/components/attachment-preview'
+import { FileUpload } from '@/components/file-upload'
 import { ModelSelector } from '@/components/model-selector-dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -7,7 +9,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { useChat } from '@/context/chat-context'
-import { ArrowUp, Paperclip, Sparkles } from 'lucide-react'
+import { ArrowUp, Sparkles } from 'lucide-react'
 import { useRef } from 'react'
 
 export function ChatInput() {
@@ -15,9 +17,9 @@ export function ChatInput() {
     inputValue,
     setInputValue,
     isLoading,
-    updateUserPreference,
     enhancePrompt,
-    send
+    send,
+    attachments
   } = useChat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -25,10 +27,6 @@ export function ChatInput() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       send()
-    }
-    // Save draft to user preferences (debounced)
-    if (e.target instanceof HTMLTextAreaElement && e.target.value) {
-      updateUserPreference({ savedPrompt: e.target.value })
     }
   }
 
@@ -41,6 +39,21 @@ export function ChatInput() {
       <div className="max-w-4xl mx-auto">
         {/* Unified Input Container */}
         <div className="border rounded-lg bg-transparent p-2">
+          {/* Attachments Preview */}
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachments.map((attachment) => (
+                <AttachmentPreview
+                  key={attachment.id}
+                  attachmentId={attachment.id}
+                  format={attachment.format}
+                  url={attachment.url}
+                  name={attachment.name}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Message Input */}
           <div className="mb-2">
             <Textarea
@@ -61,9 +74,9 @@ export function ChatInput() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 size-7">
-                  <Paperclip className="size-3.5" />
-                </Button>
+                <div>
+                  <FileUpload />
+                </div>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Attach files</p>
@@ -98,7 +111,10 @@ export function ChatInput() {
                 <TooltipTrigger asChild>
                   <Button
                     onClick={send}
-                    disabled={!inputValue.trim() || isLoading}
+                    disabled={
+                      (!inputValue.trim() && attachments.length === 0) ||
+                      isLoading
+                    }
                     size="icon"
                     className="size-7"
                   >

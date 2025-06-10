@@ -26,7 +26,6 @@ interface CategoryGridProps {
   categories?: CategoryItem[]
   selectedValue?: BasicCategory
   onSelect: (category: BasicCategory) => void
-  compact?: boolean
   disabled?: boolean
 }
 
@@ -34,7 +33,6 @@ export const CategoryGrid = memo(function CategoryGrid({
   categories,
   selectedValue,
   onSelect,
-  compact = false,
   disabled = false
 }: CategoryGridProps) {
   const { categoriesWithModels, isLoading } = useBestModels()
@@ -58,25 +56,18 @@ export const CategoryGrid = memo(function CategoryGrid({
         return Brain
     }
   }
+
   if (isDataLoading) {
     return (
-      <div
-        className={`grid gap-1.5 ${compact ? 'grid-cols-5' : 'grid-cols-4'}`}
-      >
+      <div className="grid gap-1.5 grid-cols-3 sm:grid-cols-4 md:grid-cols-4">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
           <div
             key={`loading-skeleton-${item}`}
-            className={`${compact ? 'py-1.5 px-1' : 'py-2 px-1.5'} rounded-md border animate-pulse bg-muted/50`}
+            className="py-1.5 px-1 sm:py-2 sm:px-1.5 rounded-md border animate-pulse bg-muted/50"
           >
-            <div
-              className={`flex flex-col items-center ${compact ? 'gap-1' : 'gap-1.5'}`}
-            >
-              <div
-                className={`${compact ? 'size-4' : 'size-5'} bg-muted rounded`}
-              />
-              <div
-                className={`${compact ? 'h-3' : 'h-4'} w-12 bg-muted rounded`}
-              />
+            <div className="flex flex-col items-center gap-1 sm:gap-1.5">
+              <div className="size-4 sm:size-5 bg-muted rounded" />
+              <div className="h-3 sm:h-4 w-12 bg-muted rounded" />
             </div>
           </div>
         ))}
@@ -85,7 +76,7 @@ export const CategoryGrid = memo(function CategoryGrid({
   }
   return (
     <div
-      className={`grid gap-1.5 ${compact ? 'grid-cols-5' : 'grid-cols-4'} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`grid gap-1.5 grid-cols-3 sm:grid-cols-4 md:grid-cols-4 ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
       {displayCategories.map((category) => {
         const IconComponent = category.icon
@@ -93,32 +84,30 @@ export const CategoryGrid = memo(function CategoryGrid({
         const isSelected = selectedValue === category.name
 
         return (
-          <HoverCard key={category.name} openDelay={800}>
+          <HoverCard key={category.name} closeDelay={0} openDelay={800}>
             <HoverCardTrigger asChild>
               <button
                 onClick={() =>
                   !disabled && onSelect(category.name as BasicCategory)
                 }
                 disabled={disabled}
-                className={`${compact ? 'py-1.5 px-1' : 'py-2 px-1.5'} rounded-md border transition-all text-left group hover:border-primary/50 ${
+                className={`py-1.5 px-1 sm:py-2 sm:px-1.5 rounded-md border transition-all text-left group hover:border-primary/50 ${
                   isSelected
                     ? 'border-primary bg-primary/5 text-primary'
                     : 'border-border bg-card hover:bg-muted/50'
                 } ${disabled ? 'cursor-not-allowed' : ''}`}
                 type="button"
               >
-                <div
-                  className={`flex flex-col items-center ${compact ? 'gap-1' : 'gap-1.5'}`}
-                >
+                <div className="flex flex-col items-center gap-1 sm:gap-1.5">
                   <IconComponent
-                    className={`${compact ? 'size-4' : 'size-5'} ${
+                    className={`size-4 sm:size-5 ${
                       isSelected
                         ? 'text-primary'
                         : 'text-muted-foreground group-hover:text-foreground'
                     }`}
                   />
                   <span
-                    className={`${compact ? 'text-[10px]' : 'text-xs'} font-medium text-center ${
+                    className={`text-[10px] sm:text-xs font-medium text-center ${
                       isSelected ? 'text-primary' : 'text-foreground'
                     }`}
                   >

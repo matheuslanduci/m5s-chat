@@ -1,20 +1,14 @@
+import { MessageAttachments } from '@/components/message-attachments'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
 } from '@/components/ui/tooltip'
 import type { Message } from '@/context/chat-context'
-import {
-    Bot,
-    Copy,
-    RotateCcw,
-    ThumbsDown,
-    ThumbsUp,
-    User
-} from 'lucide-react'
+import { Bot, Copy, RotateCcw, ThumbsDown, ThumbsUp, User } from 'lucide-react'
 
 interface ChatMessageProps {
   message: Message
@@ -57,6 +51,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
           ) : (
             <>
               <p className="text-sm leading-relaxed">{message.content}</p>
+              {message.attachments && (
+                <MessageAttachments attachments={message.attachments} />
+              )}
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
                 <span className="text-xs text-muted-foreground">
                   {message.timestamp.toLocaleTimeString([], {

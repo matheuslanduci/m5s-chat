@@ -80,19 +80,19 @@ export function ModelSelector() {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl h-[90vh] sm:h-[80vh] max-h-[90vh] sm:max-h-[80vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center gap-2">
                 <Bot className="size-5" />
                 Model Selection
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
+            <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 flex-1 overflow-y-auto min-h-0">
               {/* Auto Mode Section */}
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
-                <div className="flex items-center gap-3">
-                  <Zap className="size-5 text-primary" />
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Zap className="size-4 sm:size-5 text-primary" />
                   <div>
                     <h3 className="text-sm font-medium">Auto Mode</h3>
                     <p className="text-xs text-muted-foreground">
@@ -107,8 +107,11 @@ export function ModelSelector() {
               </div>{' '}
               {/* Category and Model Selection - Always visible */}
               <Separator />
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs
+                defaultValue="basic"
+                className="w-full flex-1 flex flex-col"
+              >
+                <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
                   <TabsTrigger
                     value="basic"
                     className="flex items-center gap-2"
@@ -125,18 +128,21 @@ export function ModelSelector() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="basic" className="mt-6">
+                <TabsContent
+                  value="basic"
+                  className="mt-4 sm:mt-6 flex-1 flex flex-col min-h-0"
+                >
                   {/* Category Selection */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center gap-2 mb-3 sm:mb-4 flex-shrink-0">
                       <h3 className="text-sm font-medium">Categories</h3>
                       <p className="text-xs text-muted-foreground ml-auto">
                         {selection.mode === 'auto'
                           ? 'AI will choose the best category automatically'
                           : 'Choose a category to optimize AI responses'}
                       </p>
-                    </div>{' '}
-                    <div className="max-h-64 overflow-y-auto">
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0">
                       <CategoryGrid
                         categories={categoriesWithModels}
                         selectedValue={
@@ -145,33 +151,36 @@ export function ModelSelector() {
                             : undefined
                         }
                         onSelect={handleCategorySelect}
-                        disabled={selection.mode === 'auto'}
                       />
                     </div>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="advanced" className="mt-6">
+                <TabsContent
+                  value="advanced"
+                  className="mt-4 sm:mt-6 flex-1 flex flex-col min-h-0"
+                >
                   {/* Model Selection */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center gap-2 mb-3 sm:mb-4 flex-shrink-0">
                       <h3 className="text-sm font-medium">Model Selection</h3>
                       <p className="text-xs text-muted-foreground ml-auto">
                         {selection.mode === 'auto'
                           ? 'AI will choose the best model automatically'
                           : 'Select a specific model for precise control'}
                       </p>
-                    </div>{' '}
-                    <ModelList
-                      models={models}
-                      selectedModelId={
-                        selection.mode === 'model'
-                          ? selection.modelId
-                          : undefined
-                      }
-                      onSelect={handleModelSelect}
-                      disabled={selection.mode === 'auto'}
-                    />
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                      <ModelList
+                        models={models}
+                        selectedModelId={
+                          selection.mode === 'model'
+                            ? selection.modelId
+                            : undefined
+                        }
+                        onSelect={handleModelSelect}
+                      />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>

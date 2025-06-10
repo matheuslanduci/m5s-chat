@@ -143,6 +143,8 @@ If the prompt is reliable, enhance it according to these guidelines:
 3. Improve structure and flow
 4. ${args.generalPrompt ? "Align with the user's general prompt context when relevant" : 'Be more engaging and effective'}
 5. Keep the same tone and style preference as the original
+6. Do NOT add your own perspective, opinions, or judgments to the prompt
+7. Remain completely neutral and objective in your enhancement
 
 If the prompt is not reliable, still provide an enhanced version but mark it as unreliable and explain why.
 

@@ -13,12 +13,20 @@ import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
 // Types
+export interface Attachment {
+  id: Id<'attachment'>
+  format: 'image' | 'pdf'
+  url: string
+  name: string
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
   isTyping?: boolean
+  attachments?: Attachment[]
 }
 
 export interface UserPreferences {
@@ -39,6 +47,12 @@ export interface ChatContextValue {
   // Input
   inputValue: string
   setInputValue: (value: string) => void
+
+  // Attachments
+  attachments: Attachment[]
+  addAttachment: (attachment: Attachment) => void
+  removeAttachment: (attachmentId: Id<'attachment'>) => Promise<void>
+  clearAttachments: () => void
 
   // Actions
   send: () => Promise<void>
@@ -63,6 +77,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
 
   // Queries and mutations
   const userPreferences = useQuery(api.userPreference.getUserPreferences)
@@ -70,6 +85,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     api.userPreference.upsertUserPreferences
   )
   const enhancePromptAction = useAction(api.ai.enhancePrompt)
+  const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
+
+  // Attachment functions
+  const addAttachment = useCallback((attachment: Attachment) => {
+    setAttachments((prev) => [...prev, attachment])
+  }, [])
+
+  const removeAttachment = useCallback(
+    async (attachmentId: Id<'attachment'>) => {
+      try {
+        // Remove from local state immediately for better UX
+        setAttachments((prev) => prev.filter((att) => att.id !== attachmentId))
+
+        // Delete from Convex storage
+        await deleteAttachmentMutation({ attachmentId })
+
+        toast.success('Attachment removed')
+      } catch (error) {
+        console.error('Failed to delete attachment:', error)
+        toast.error('Failed to remove attachment')
+
+        // Restore attachment on error (you might want to refetch the actual state)
+        // For now, we'll just show an error message
+      }
+    },
+    [deleteAttachmentMutation]
+  )
+
+  const clearAttachments = useCallback(() => {
+    setAttachments([])
+  }, [])
 
   // Initialize with welcome message
   useEffect(() => {
@@ -163,17 +209,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Send message function
   const send = useCallback(async () => {
-    if (!inputValue.trim() || isLoading) return
+    if ((!inputValue.trim() && attachments.length === 0) || isLoading) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue.trim(),
-      timestamp: new Date()
+      content:
+        inputValue.trim() ||
+        (attachments.length > 0 ? '[File(s) attached]' : ''),
+      timestamp: new Date(),
+      attachments: attachments.length > 0 ? [...attachments] : undefined
     }
 
     setMessages((prev) => [...prev, userMessage])
     setInputValue('')
+    clearAttachments() // Clear attachments after sending
     setIsLoading(true)
 
     // Add typing indicator
@@ -219,7 +269,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, isLoading, simulateAIResponse])
+  }, [inputValue, isLoading, attachments, simulateAIResponse, clearAttachments])
 
   // Pause function
   const pause = useCallback(() => {
@@ -243,6 +293,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     messages,
     inputValue,
     setInputValue,
+    attachments,
+    addAttachment,
+    removeAttachment,
+    clearAttachments,
     send,
     pause,
     clearHistory,
