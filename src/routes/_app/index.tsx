@@ -1,9 +1,8 @@
-import { ChatHeader } from '@/components/chat-header'
-import { ChatMessages } from '@/components/chat-messages'
 import { ChatInput } from '@/components/chat-input'
+import { ChatMessages } from '@/components/chat-messages'
+import { useChat } from '@/context/chat-context'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { useChat } from '@/context/chat-context'
 
 export const Route = createFileRoute('/_app/')({
   component: RouteComponent
@@ -11,15 +10,14 @@ export const Route = createFileRoute('/_app/')({
 
 function RouteComponent() {
   const { clearHistory } = useChat()
-  
+
   // Clear history when component mounts (user navigates to index page)
   useEffect(() => {
     clearHistory()
   }, [clearHistory])
 
   return (
-    <div className="flex flex-col min-w-0 h-dvh bg-background">
-      <ChatHeader />
+    <div className="flex flex-col flex-1 min-w-0 bg-background">
       <ChatMessages />
       <ChatInput />
     </div>

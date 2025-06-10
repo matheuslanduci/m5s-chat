@@ -17,6 +17,7 @@ import { Route as AppIndexImport } from './routes/_app/index'
 import { Route as AppSettingsImport } from './routes/_app/settings'
 import { Route as AuthSignUpSplatImport } from './routes/_auth/sign-up.$'
 import { Route as AuthSignInSplatImport } from './routes/_auth/sign-in.$'
+import { Route as AppChatChatIdImport } from './routes/_app/chat/$chatId'
 
 // Create/Update Routes
 
@@ -54,6 +55,12 @@ const AuthSignInSplatRoute = AuthSignInSplatImport.update({
   getParentRoute: () => AuthRoute,
 } as any)
 
+const AppChatChatIdRoute = AppChatChatIdImport.update({
+  id: '/chat/$chatId',
+  path: '/chat/$chatId',
+  getParentRoute: () => AppRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -86,6 +93,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexImport
       parentRoute: typeof AppImport
     }
+    '/_app/chat/$chatId': {
+      id: '/_app/chat/$chatId'
+      path: '/chat/$chatId'
+      fullPath: '/chat/$chatId'
+      preLoaderRoute: typeof AppChatChatIdImport
+      parentRoute: typeof AppImport
+    }
     '/_auth/sign-in/$': {
       id: '/_auth/sign-in/$'
       path: '/sign-in/$'
@@ -108,11 +122,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppChatChatIdRoute: typeof AppChatChatIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppChatChatIdRoute: AppChatChatIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -133,6 +149,7 @@ export interface FileRoutesByFullPath {
   '': typeof AuthRouteWithChildren
   '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
+  '/chat/$chatId': typeof AppChatChatIdRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
 }
@@ -141,6 +158,7 @@ export interface FileRoutesByTo {
   '': typeof AuthRouteWithChildren
   '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
+  '/chat/$chatId': typeof AppChatChatIdRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
 }
@@ -151,21 +169,29 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/chat/$chatId': typeof AppChatChatIdRoute
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/settings' | '/' | '/sign-in/$' | '/sign-up/$'
+  fullPaths:
+    | ''
+    | '/settings'
+    | '/'
+    | '/chat/$chatId'
+    | '/sign-in/$'
+    | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '' | '/settings' | '/' | '/sign-in/$' | '/sign-up/$'
+  to: '' | '/settings' | '/' | '/chat/$chatId' | '/sign-in/$' | '/sign-up/$'
   id:
     | '__root__'
     | '/_app'
     | '/_auth'
     | '/_app/settings'
     | '/_app/'
+    | '/_app/chat/$chatId'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
   fileRoutesById: FileRoutesById
@@ -199,7 +225,8 @@ export const routeTree = rootRoute
       "filePath": "_app.tsx",
       "children": [
         "/_app/settings",
-        "/_app/"
+        "/_app/",
+        "/_app/chat/$chatId"
       ]
     },
     "/_auth": {
@@ -215,6 +242,10 @@ export const routeTree = rootRoute
     },
     "/_app/": {
       "filePath": "_app/index.tsx",
+      "parent": "/_app"
+    },
+    "/_app/chat/$chatId": {
+      "filePath": "_app/chat/$chatId.tsx",
       "parent": "/_app"
     },
     "/_auth/sign-in/$": {
