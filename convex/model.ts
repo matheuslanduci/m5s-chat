@@ -12,6 +12,47 @@ export const getAllModels = query({
   }
 })
 
+export const getAllBestModels = query({
+  args: {},
+  handler: async (ctx) => {
+    const bestModels = await ctx.db.query('bestModel').collect()
+
+    // Fetch the actual model details for each best model
+    const modelsWithDetails = await Promise.all(
+      bestModels.map(async (bestModel) => {
+        const model = await ctx.db.get(bestModel.model)
+        return {
+          category: bestModel.category,
+          model: model
+        }
+      })
+    )
+
+    return modelsWithDetails.filter((item) => item.model !== null)
+  }
+})
+
+export const getBestModelByCategory = query({
+  args: { category },
+  handler: async (ctx, args) => {
+    const bestModel = await ctx.db
+      .query('bestModel')
+      .withIndex('byCategory', (q) => q.eq('category', args.category))
+      .first()
+
+    if (!bestModel) {
+      return null
+    }
+
+    const model = await ctx.db.get(bestModel.model)
+
+    return {
+      category: bestModel.category,
+      model: model
+    }
+  }
+})
+
 export const getUserModelPreference = query({
   handler: async (ctx) => {
     const user = await ctx.auth.getUserIdentity()

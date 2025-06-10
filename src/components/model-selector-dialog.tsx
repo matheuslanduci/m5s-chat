@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+import { useBestModels } from '@/hooks/use-best-models'
 import {
   type BasicCategory,
   useModelSelection
@@ -21,12 +22,11 @@ import {
 import { Bot, ChevronDown, Loader2, Settings, Zap } from 'lucide-react'
 import { useState } from 'react'
 import type { Id } from '../../convex/_generated/dataModel'
-import { CategoryGrid, basicCategories } from './category-grid'
+import { CategoryGrid } from './category-grid'
 import { ModelList } from './model-list'
 
 export function ModelSelector() {
   const [isOpen, setIsOpen] = useState(false)
-
   const {
     selection,
     isLoading,
@@ -37,39 +37,26 @@ export function ModelSelector() {
     setModelMode,
     displayName
   } = useModelSelection()
-
-  // Convert database categories to category items
-  const categoryItems = categories.map((categoryName) => {
-    const foundCategory = basicCategories.find((bc) => bc.name === categoryName)
-    return (
-      foundCategory || {
-        name: categoryName,
-        icon: Settings,
-        description: 'Custom category',
-        provider: 'openai' as const,
-        model: 'Custom Model'
-      }
-    )
-  })
+  // Fetch best models data once at this level
+  const { categoriesWithModels } = useBestModels()
 
   const handleAutoToggle = (checked: boolean) => {
     if (checked) {
       setAutoMode()
     } else {
       // If turning off auto, default to category mode with first available category
-      const firstCategory = categoryItems[0]?.name as BasicCategory
+      const firstCategory = categories[0] as BasicCategory
       if (firstCategory) {
         setCategoryMode(firstCategory)
       }
     }
   }
-
   const handleCategorySelect = (category: BasicCategory) => {
     setCategoryMode(category)
+    setIsOpen(false)
   }
-
-  const handleModelSelect = (modelId: string) => {
-    setModelMode(modelId as Id<'model'>)
+  const handleModelSelect = (modelId: Id<'model'>) => {
+    setModelMode(modelId)
     setIsOpen(false)
   }
 
@@ -117,71 +104,77 @@ export function ModelSelector() {
                   checked={selection.mode === 'auto'}
                   onCheckedChange={handleAutoToggle}
                 />
-              </div>
+              </div>{' '}
+              {/* Category and Model Selection - Always visible */}
+              <Separator />
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger
+                    value="basic"
+                    className="flex items-center gap-2"
+                  >
+                    <Zap className="size-4" />
+                    Basic
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="advanced"
+                    className="flex items-center gap-2"
+                  >
+                    <Settings className="size-4" />
+                    Advanced
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Category and Model Selection */}
-              {selection.mode !== 'auto' && (
-                <>
-                  <Separator />
+                <TabsContent value="basic" className="mt-6">
+                  {/* Category Selection */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <h3 className="text-sm font-medium">Categories</h3>
+                      <p className="text-xs text-muted-foreground ml-auto">
+                        {selection.mode === 'auto'
+                          ? 'AI will choose the best category automatically'
+                          : 'Choose a category to optimize AI responses'}
+                      </p>
+                    </div>{' '}
+                    <div className="max-h-64 overflow-y-auto">
+                      <CategoryGrid
+                        categories={categoriesWithModels}
+                        selectedValue={
+                          selection.mode === 'category'
+                            ? selection.category
+                            : undefined
+                        }
+                        onSelect={handleCategorySelect}
+                        disabled={selection.mode === 'auto'}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
 
-                  <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger
-                        value="basic"
-                        className="flex items-center gap-2"
-                      >
-                        <Zap className="size-4" />
-                        Basic
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="advanced"
-                        className="flex items-center gap-2"
-                      >
-                        <Settings className="size-4" />
-                        Advanced
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="basic" className="mt-6">
-                      {/* Category Selection */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <h3 className="text-sm font-medium">Categories</h3>
-                          <p className="text-xs text-muted-foreground ml-auto">
-                            Choose a category to optimize AI responses
-                          </p>
-                        </div>
-                        <div className="max-h-64 overflow-y-auto">
-                          <CategoryGrid
-                            categories={categoryItems}
-                            selectedValue={selection.category}
-                            onSelect={handleCategorySelect}
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="advanced" className="mt-6">
-                      {/* Model Selection */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <h3 className="text-sm font-medium">
-                            Model Selection
-                          </h3>
-                          <p className="text-xs text-muted-foreground ml-auto">
-                            Select a specific model for precise control
-                          </p>
-                        </div>
-                        <ModelList
-                          models={models}
-                          selectedModelId={selection.modelId}
-                          onSelect={handleModelSelect}
-                        />
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </>
-              )}
+                <TabsContent value="advanced" className="mt-6">
+                  {/* Model Selection */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <h3 className="text-sm font-medium">Model Selection</h3>
+                      <p className="text-xs text-muted-foreground ml-auto">
+                        {selection.mode === 'auto'
+                          ? 'AI will choose the best model automatically'
+                          : 'Select a specific model for precise control'}
+                      </p>
+                    </div>{' '}
+                    <ModelList
+                      models={models}
+                      selectedModelId={
+                        selection.mode === 'model'
+                          ? selection.modelId
+                          : undefined
+                      }
+                      onSelect={handleModelSelect}
+                      disabled={selection.mode === 'auto'}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </DialogContent>
         </Dialog>

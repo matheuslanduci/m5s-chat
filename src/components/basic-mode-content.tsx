@@ -1,4 +1,4 @@
-import { CategoryGrid, basicCategories } from '@/components/category-grid'
+import { CategoryGrid } from '@/components/category-grid'
 import { Switch } from '@/components/ui/switch'
 import {
   Tooltip,
@@ -19,20 +19,6 @@ export function BasicModeContent({
   setModelSelection,
   categories
 }: BasicModeContentProps) {
-  // Convert database categories to CategoryItem objects by finding matches in basicCategories
-  const categoryItems = categories.map((categoryName) => {
-    const foundCategory = basicCategories.find((bc) => bc.name === categoryName)
-    return (
-      foundCategory || {
-        name: categoryName,
-        icon: HelpCircle,
-        description: 'Custom category',
-        provider: 'openai' as const,
-        model: 'GPT-4'
-      }
-    )
-  })
-
   return (
     <div className="space-y-4">
       {/* Auto Mode Toggle */}
@@ -62,7 +48,7 @@ export function BasicModeContent({
             } else {
               // Disable auto mode - ensure we have a selection
               const currentSelection = modelSelection.basic
-              const firstCategory = categoryItems[0]?.name as BasicCategory
+              const firstCategory = categories[0] as BasicCategory
               setModelSelection({
                 ...modelSelection,
                 mode: 'basic',
@@ -91,10 +77,9 @@ export function BasicModeContent({
                 category
               </p>
             </TooltipContent>
-          </Tooltip>
+          </Tooltip>{' '}
         </div>
         <CategoryGrid
-          categories={categoryItems}
           selectedValue={
             modelSelection.isAuto ? undefined : modelSelection.basic
           }

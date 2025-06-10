@@ -58,6 +58,8 @@ export interface UseModelSelectionReturn {
 export function useModelSelection(): UseModelSelectionReturn {
   const { user } = useUser()
   const [isUpdating, setIsUpdating] = useState(false)
+  const [optimisticSelection, setOptimisticSelection] =
+    useState<ModelSelection | null>(null)
 
   // Queries
   const userModelPreference = useQuery(api.model.getUserModelPreference)
@@ -67,29 +69,48 @@ export function useModelSelection(): UseModelSelectionReturn {
   // Mutations
   const updatePreferences = useMutation(
     api.userPreference.upsertUserPreferences
-  )
-
-  // Derive current selection from user preferences
+  ) // Derive current selection from user preferences with optimistic updates
   const selection: ModelSelection = useMemo(() => {
+    console.log('userModelPreference:', userModelPreference)
+    console.log('optimisticSelection:', optimisticSelection)
+
+    // Use optimistic selection if available
+    if (optimisticSelection) {
+      console.log('Using optimistic selection:', optimisticSelection)
+      return optimisticSelection
+    }
+
     if (!userModelPreference) {
+      console.log('No user model preference, defaulting to auto')
       return { mode: 'auto' }
     }
 
+    console.log('User preference type:', userModelPreference.type)
+
     switch (userModelPreference.type) {
       case 'favoriteModel':
+        console.log(
+          'Selected mode: model, modelId:',
+          userModelPreference.model._id
+        )
         return {
           mode: 'model',
           modelId: userModelPreference.model._id
         }
       case 'favoriteCategory':
+        console.log(
+          'Selected mode: category, category:',
+          userModelPreference.category
+        )
         return {
           mode: 'category',
           category: userModelPreference.category
         }
       default:
+        console.log('Selected mode: auto (default case)')
         return { mode: 'auto' }
     }
-  }, [userModelPreference])
+  }, [userModelPreference, optimisticSelection])
 
   // Find selected model
   const selectedModel = useMemo(() => {
@@ -111,22 +132,47 @@ export function useModelSelection(): UseModelSelectionReturn {
       default:
         return 'Auto'
     }
-  }, [selection, selectedModel])
-
-  // Update preferences helper
+  }, [selection, selectedModel]) // Update preferences helper with optimistic updates
   const updateUserPreferences = useCallback(
     async (updates: {
       isAuto?: boolean
       favoriteCategory?: BasicCategory
       favoriteModel?: Id<'model'>
     }) => {
-      if (!user?.id || isUpdating) return
+      console.log('updateUserPreferences called with:', updates)
+      console.log('User ID:', user?.id, 'isUpdating:', isUpdating)
+
+      if (!user?.id || isUpdating) {
+        console.log('Skipping update - no user or already updating')
+        return
+      }
+
+      // Set optimistic state immediately
+      if (updates.isAuto) {
+        setOptimisticSelection({ mode: 'auto' })
+      } else if (updates.favoriteCategory) {
+        setOptimisticSelection({
+          mode: 'category',
+          category: updates.favoriteCategory
+        })
+      } else if (updates.favoriteModel) {
+        setOptimisticSelection({
+          mode: 'model',
+          modelId: updates.favoriteModel
+        })
+      }
 
       try {
         setIsUpdating(true)
+        console.log('Calling updatePreferences mutation...')
         await updatePreferences(updates)
+        console.log('Update preferences completed successfully')
+        // Clear optimistic state once mutation succeeds
+        setOptimisticSelection(null)
       } catch (error) {
         console.error('Failed to update preferences:', error)
+        // Revert optimistic update on error
+        setOptimisticSelection(null)
       } finally {
         setIsUpdating(false)
       }
@@ -134,8 +180,8 @@ export function useModelSelection(): UseModelSelectionReturn {
     [user?.id, updatePreferences, isUpdating]
   )
 
-  // Actions
   const setAutoMode = useCallback(() => {
+    console.log('setAutoMode called')
     updateUserPreferences({
       isAuto: true,
       favoriteCategory: undefined,
@@ -145,6 +191,7 @@ export function useModelSelection(): UseModelSelectionReturn {
 
   const setCategoryMode = useCallback(
     (category: BasicCategory) => {
+      console.log('setCategoryMode called with:', category)
       updateUserPreferences({
         favoriteCategory: category,
         favoriteModel: undefined,
@@ -156,6 +203,7 @@ export function useModelSelection(): UseModelSelectionReturn {
 
   const setModelMode = useCallback(
     (modelId: Id<'model'>) => {
+      console.log('setModelMode called with:', modelId)
       updateUserPreferences({
         favoriteModel: modelId,
         favoriteCategory: undefined,

@@ -57,50 +57,29 @@ export const upsertUserPreferences = mutation({
 
     if (existingPrefs) {
       await ctx.db.patch(existingPrefs._id, {
-        ...(args.theme !== undefined && { theme: args.theme }),
-        ...(args.savedPrompt !== undefined && {
-          savedPrompt: args.savedPrompt
-        }),
-        ...(args.generalPrompt !== undefined && {
-          generalPrompt: args.generalPrompt
-        }),
-        ...(args.favoriteModel !== undefined && {
-          favoriteModel: args.favoriteModel
-        }),
-        ...(args.favoriteCategory !== undefined && {
-          favoriteCategory: args.favoriteCategory
-        }),
-        ...(args.uncategorized !== undefined && {
-          uncategorized: args.uncategorized
-        }),
-        ...(args.autoSummarize !== undefined && {
-          autoSummarize: args.autoSummarize
-        })
+        theme: args.theme,
+        savedPrompt: args.savedPrompt,
+        generalPrompt: args.generalPrompt,
+        favoriteModel: args.favoriteModel,
+        favoriteCategory: args.favoriteCategory,
+        isAuto: args.isAuto,
+        uncategorized: args.uncategorized,
+        autoSummarize: args.autoSummarize
       })
+
       return existingPrefs._id
     }
 
     return await ctx.db.insert('userPreference', {
       userId: user.subject,
-      ...(args.theme !== undefined && { theme: args.theme }),
-      ...(args.savedPrompt !== undefined && {
-        savedPrompt: args.savedPrompt
-      }),
-      ...(args.generalPrompt !== undefined && {
-        generalPrompt: args.generalPrompt
-      }),
-      ...(args.favoriteModel !== undefined && {
-        favoriteModel: args.favoriteModel
-      }),
-      ...(args.favoriteCategory !== undefined && {
-        favoriteCategory: args.favoriteCategory
-      }),
-      ...(args.uncategorized !== undefined && {
-        uncategorized: args.uncategorized
-      }),
-      ...(args.autoSummarize !== undefined && {
-        autoSummarize: args.autoSummarize
-      })
+      theme: args.theme,
+      savedPrompt: args.savedPrompt,
+      generalPrompt: args.generalPrompt,
+      favoriteModel: args.favoriteModel,
+      favoriteCategory: args.favoriteCategory,
+      isAuto: args.isAuto,
+      uncategorized: args.uncategorized,
+      autoSummarize: args.autoSummarize
     })
   }
 })

@@ -139,9 +139,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       if (result.isReliable) {
         setInputValue(result.enhancedPrompt)
-        toast.success('Prompt enhanced successfully!', {
-          description: `${result.improvements.length} improvements applied`
-        })
       } else {
         toast.warning('Unable to enhance prompt', {
           description:

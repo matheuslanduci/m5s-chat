@@ -10,20 +10,9 @@ import {
   HoverCardTrigger
 } from '@/components/ui/hover-card'
 import type { BasicCategory } from '@/context/chat-context'
-import {
-  Brain,
-  Code,
-  DollarSign,
-  FileText,
-  Globe,
-  GraduationCap,
-  Heart,
-  HelpCircle,
-  Lightbulb,
-  Shield,
-  TrendingUp,
-  Users
-} from 'lucide-react'
+import { useBestModels } from '@/hooks/use-best-models'
+import { Brain } from 'lucide-react'
+import { memo } from 'react'
 
 interface CategoryItem {
   name: string
@@ -34,105 +23,27 @@ interface CategoryItem {
 }
 
 interface CategoryGridProps {
-  categories: CategoryItem[]
+  categories?: CategoryItem[]
   selectedValue?: BasicCategory
   onSelect: (category: BasicCategory) => void
   compact?: boolean
+  disabled?: boolean
 }
 
-export const basicCategories: CategoryItem[] = [
-  {
-    name: 'Programming',
-    icon: Code,
-    description: 'Optimized for coding and technical tasks',
-    provider: 'anthropic',
-    model: 'Claude 3.5 Sonnet'
-  },
-  {
-    name: 'Roleplay',
-    icon: Users,
-    description: 'Creative character interactions and storytelling',
-    provider: 'openai',
-    model: 'GPT-4o-mini'
-  },
-  {
-    name: 'Marketing',
-    icon: TrendingUp,
-    description: 'Content creation and marketing strategies',
-    provider: 'anthropic',
-    model: 'Claude 3.5 Sonnet'
-  },
-  {
-    name: 'SEO',
-    icon: Globe,
-    description: 'Search engine optimization and web content',
-    provider: 'google',
-    model: 'Gemini 2.0 Flash'
-  },
-  {
-    name: 'Technology',
-    icon: Lightbulb,
-    description: 'Tech discussions and innovations',
-    provider: 'deepseek',
-    model: 'DeepSeek V3'
-  },
-  {
-    name: 'Science',
-    icon: Brain,
-    description: 'Scientific research and analysis',
-    provider: 'google',
-    model: 'Gemini 2.5 Pro'
-  },
-  {
-    name: 'Translation',
-    icon: FileText,
-    description: 'Language translation and localization',
-    provider: 'openai',
-    model: 'GPT-4o-mini'
-  },
-  {
-    name: 'Legal',
-    icon: Shield,
-    description: 'Legal advice and document analysis',
-    provider: 'anthropic',
-    model: 'Claude 3.5 Sonnet'
-  },
-  {
-    name: 'Finance',
-    icon: DollarSign,
-    description: 'Financial planning and analysis',
-    provider: 'google',
-    model: 'Gemini 2.5 Pro'
-  },
-  {
-    name: 'Health',
-    icon: Heart,
-    description: 'Health and wellness information',
-    provider: 'google',
-    model: 'Gemini 2.5 Pro'
-  },
-  {
-    name: 'Trivia',
-    icon: HelpCircle,
-    description: 'Fun facts and general knowledge',
-    provider: 'deepseek',
-    model: 'DeepSeek V3'
-  },
-  {
-    name: 'Academia',
-    icon: GraduationCap,
-    description: 'Academic research and education',
-    provider: 'anthropic',
-    model: 'Claude 3.5 Sonnet'
-  }
-]
-
-export function CategoryGrid({
+export const CategoryGrid = memo(function CategoryGrid({
   categories,
   selectedValue,
   onSelect,
-  compact = false
+  compact = false,
+  disabled = false
 }: CategoryGridProps) {
+  const { categoriesWithModels, isLoading } = useBestModels()
+
+  // Use provided categories or fall back to best models from database
+  // Only fetch from hook if no categories are provided
+  const displayCategories = categories || categoriesWithModels
+  const isDataLoading = isLoading && !categories
+
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case 'openai':
@@ -147,10 +58,36 @@ export function CategoryGrid({
         return Brain
     }
   }
-
+  if (isDataLoading) {
+    return (
+      <div
+        className={`grid gap-1.5 ${compact ? 'grid-cols-5' : 'grid-cols-4'}`}
+      >
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
+          <div
+            key={`loading-skeleton-${item}`}
+            className={`${compact ? 'py-1.5 px-1' : 'py-2 px-1.5'} rounded-md border animate-pulse bg-muted/50`}
+          >
+            <div
+              className={`flex flex-col items-center ${compact ? 'gap-1' : 'gap-1.5'}`}
+            >
+              <div
+                className={`${compact ? 'size-4' : 'size-5'} bg-muted rounded`}
+              />
+              <div
+                className={`${compact ? 'h-3' : 'h-4'} w-12 bg-muted rounded`}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
-    <div className={`grid gap-1.5 ${compact ? 'grid-cols-5' : 'grid-cols-4'}`}>
-      {categories.map((category) => {
+    <div
+      className={`grid gap-1.5 ${compact ? 'grid-cols-5' : 'grid-cols-4'} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+    >
+      {displayCategories.map((category) => {
         const IconComponent = category.icon
         const ProviderIcon = getProviderIcon(category.provider)
         const isSelected = selectedValue === category.name
@@ -159,12 +96,15 @@ export function CategoryGrid({
           <HoverCard key={category.name} openDelay={800}>
             <HoverCardTrigger asChild>
               <button
-                onClick={() => onSelect(category.name as BasicCategory)}
+                onClick={() =>
+                  !disabled && onSelect(category.name as BasicCategory)
+                }
+                disabled={disabled}
                 className={`${compact ? 'py-1.5 px-1' : 'py-2 px-1.5'} rounded-md border transition-all text-left group hover:border-primary/50 ${
                   isSelected
                     ? 'border-primary bg-primary/5 text-primary'
                     : 'border-border bg-card hover:bg-muted/50'
-                }`}
+                } ${disabled ? 'cursor-not-allowed' : ''}`}
                 type="button"
               >
                 <div
@@ -211,4 +151,4 @@ export function CategoryGrid({
       })}
     </div>
   )
-}
+})

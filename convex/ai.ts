@@ -3,10 +3,11 @@ import { generateObject, streamText as generateStreamText } from 'ai'
 import { v } from 'convex/values'
 import { z } from 'zod'
 import { action } from './_generated/server'
+import { unauthorized } from './error'
 
 const TITLE_MODEL = 'google/gemini-2.0-flash-001'
 const CATEGORY_MODEL = 'google/gemini-2.0-flash-001'
-const ENHANCE_MODEL = 'google/gemini-2.0-flash-001'
+const ENHANCE_MODEL = 'google/gemini-2.0-flash-lite-001'
 
 export async function generateTitle(prompt: string) {
   const openRouter = createOpenRouter({
@@ -115,7 +116,11 @@ export const enhancePrompt = action({
     userPrompt: v.string(),
     generalPrompt: v.optional(v.string())
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
     const openRouter = createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY
     })
