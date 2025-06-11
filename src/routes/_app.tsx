@@ -1,25 +1,26 @@
 import { AppSidebar } from '@/components/app-sidebar'
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { SiteHeader } from '@/components/site-header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { ChatProvider } from '@/context/chat-context'
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_app')({
   component: () => (
-    <div className="h-dvh">
-      <SidebarProvider>
-        <AppSidebar />
-        <main className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center gap-2 p-2 border-b shrink-0">
-            <SidebarTrigger />
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex-1 flex flex-col min-w-0">
+              <ChatProvider>
+                <Outlet />
+              </ChatProvider>
+            </div>
           </div>
-          <div className="flex-1 flex flex-col min-w-0">
-            <ChatProvider>
-              <Outlet />
-            </ChatProvider>
-          </div>
-        </main>
-      </SidebarProvider>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   ),
   beforeLoad({ context }) {
     if (context.user.isLoaded && !context.user.isSignedIn) {

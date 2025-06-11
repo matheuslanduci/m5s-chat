@@ -23,6 +23,12 @@ export function ChatInput() {
   } = useChat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Detect platform for keyboard shortcut display
+  const isMac =
+    typeof window !== 'undefined' &&
+    /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+  const shortcutKey = isMac ? '⌘' : 'Ctrl'
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -70,7 +76,16 @@ export function ChatInput() {
 
           {/* Bottom Row: Model Selection, Attachment, Enhance & Send */}
           <div className="flex items-center gap-3">
-            <ModelSelector />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <ModelSelector />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select AI model ({shortcutKey} + L)</p>
+              </TooltipContent>
+            </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>

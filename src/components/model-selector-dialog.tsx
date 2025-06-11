@@ -21,6 +21,7 @@ import {
 } from '@/hooks/use-model-selection'
 import { Bot, ChevronDown, Loader2, Settings, Zap } from 'lucide-react'
 import { useState } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
 import type { Id } from '../../convex/_generated/dataModel'
 import { CategoryGrid } from './category-grid'
 import { ModelList } from './model-list'
@@ -39,6 +40,25 @@ export function ModelSelector() {
   } = useModelSelection()
   // Fetch best models data once at this level
   const { categoriesWithModels } = useBestModels()
+
+  // Detect platform for keyboard shortcut display
+  const isMac =
+    typeof window !== 'undefined' &&
+    /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+  const shortcutKey = isMac ? '⌘' : 'Ctrl'
+
+  // Add keyboard shortcut
+  useHotkeys(
+    'meta+l,ctrl+l',
+    (e) => {
+      e.preventDefault()
+      setIsOpen(true)
+    },
+    {
+      enableOnFormTags: true,
+      enableOnContentEditable: true
+    }
+  )
 
   const handleAutoToggle = (checked: boolean) => {
     if (checked) {
@@ -189,7 +209,7 @@ export function ModelSelector() {
         </Dialog>
       </TooltipTrigger>
       <TooltipContent>
-        <p>Select AI model</p>
+        <p>Select AI model ({shortcutKey} + L)</p>
       </TooltipContent>
     </Tooltip>
   )
