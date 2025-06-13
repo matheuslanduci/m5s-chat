@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 
 export function FileUpload() {
-  const { addAttachment } = useChat()
+  const { addAttachment, attachments } = useChat()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -15,6 +15,14 @@ export function FileUpload() {
   const createAttachment = useMutation(api.attachment.createAttachment)
 
   const handleFileSelect = () => {
+    // Check attachment limit before opening file dialog
+    if (attachments.length >= 5) {
+      toast.error('Maximum attachments reached', {
+        description: 'You can upload up to 5 attachments per message.'
+      })
+      return
+    }
+
     fileInputRef.current?.click()
   }
 
@@ -22,9 +30,17 @@ export function FileUpload() {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0]
+
     if (!file) return
 
-    // Validate file type
+    // Double check attachment limit
+    if (attachments.length >= 5) {
+      toast.error('Maximum attachments reached', {
+        description: 'You can upload up to 5 attachments per message.'
+      })
+      return
+    }
+
     const allowedTypes = [
       'image/jpeg',
       'image/png',
@@ -32,6 +48,7 @@ export function FileUpload() {
       'image/webp',
       'application/pdf'
     ]
+
     if (!allowedTypes.includes(file.type)) {
       toast.error('Invalid file type', {
         description:
@@ -40,8 +57,8 @@ export function FileUpload() {
       return
     }
 
-    // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024 // 10MB
+
     if (file.size > maxSize) {
       toast.error('File too large', {
         description: 'Please upload a file smaller than 10MB.'
@@ -53,10 +70,8 @@ export function FileUpload() {
       setIsUploading(true)
       toast.loading('Uploading file...', { id: 'file-upload' })
 
-      // Get upload URL
       const uploadUrl = await generateUploadUrl()
 
-      // Upload file to Convex storage
       const result = await fetch(uploadUrl, {
         method: 'POST',
         headers: { 'Content-Type': file.type },
@@ -69,16 +84,13 @@ export function FileUpload() {
 
       const { storageId } = await result.json()
 
-      // Determine format
       const format = file.type.startsWith('image/') ? 'image' : 'pdf'
 
-      // Create attachment record
       const attachmentId = await createAttachment({
         storageId,
         format
       })
 
-      // Add to local state
       addAttachment({
         id: attachmentId,
         format,
@@ -95,7 +107,7 @@ export function FileUpload() {
       })
     } finally {
       setIsUploading(false)
-      // Reset file input
+
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -109,7 +121,12 @@ export function FileUpload() {
         size="icon"
         className="shrink-0 size-7"
         onClick={handleFileSelect}
-        disabled={isUploading}
+        disabled={isUploading || attachments.length >= 5}
+        title={
+          attachments.length >= 5
+            ? 'Maximum 5 attachments allowed'
+            : 'Upload file'
+        }
       >
         {isUploading ? (
           <Loader2 className="size-3.5 animate-spin" />

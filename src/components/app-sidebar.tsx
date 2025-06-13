@@ -25,7 +25,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link to="/">
                 <MessageCircle className="h-5 w-5" />
-                <span className="text-base font-semibold">m5s Chat</span>
+                <span className="text-base font-semibold">m5s.chat</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

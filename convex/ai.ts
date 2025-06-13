@@ -2,30 +2,35 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { generateObject, streamText as generateStreamText } from 'ai'
 import { v } from 'convex/values'
 import { z } from 'zod'
-import { action } from './_generated/server'
+import { action, internalAction } from './_generated/server'
 import { unauthorized } from './error'
 
 const TITLE_MODEL = 'google/gemini-2.0-flash-001'
 const CATEGORY_MODEL = 'google/gemini-2.0-flash-001'
 const ENHANCE_MODEL = 'google/gemini-2.0-flash-lite-001'
 
-export async function generateTitle(prompt: string) {
-  const openRouter = createOpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY
-  })
+export const generateTitle = internalAction({
+  args: {
+    prompt: v.string()
+  },
+  handler: async (_, args) => {
+    const openRouter = createOpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY
+    })
 
-  const response = await generateObject({
-    model: openRouter(TITLE_MODEL),
-    prompt: `Generate a concise and descriptive title for the following content:\n\n${prompt}`,
-    schema: z.object({
-      title: z.string().describe('The generated title for the content')
-    }),
-    maxTokens: 20,
-    temperature: 0.5
-  })
+    const response = await generateObject({
+      model: openRouter(TITLE_MODEL),
+      prompt: `Generate a concise and descriptive title for the following content:\n\n${args.prompt}`,
+      schema: z.object({
+        title: z.string().describe('The generated title for the content')
+      }),
+      maxTokens: 20,
+      temperature: 0.5
+    })
 
-  return response.object.title
-}
+    return response.object.title
+  }
+})
 
 export async function generateCategory(prompt: string) {
   const openRouter = createOpenRouter({
@@ -159,19 +164,10 @@ Please provide an enhanced version and assess its reliability:`
         enhancedPrompt: z
           .string()
           .describe('The enhanced and improved version of the user prompt'),
-        improvements: z
-          .array(z.string())
-          .describe('List of improvements made to the original prompt'),
         isReliable: z
           .boolean()
           .describe(
             'Whether the prompt represents a valid, actionable request or question that can be meaningfully enhanced'
-          ),
-        unreliableReason: z
-          .string()
-          .optional()
-          .describe(
-            'If isReliable is false, explain why the prompt is not reliable (e.g., too vague, nonsensical, not a request)'
           )
       }),
       maxTokens: 500,
@@ -180,10 +176,8 @@ Please provide an enhanced version and assess its reliability:`
 
     return {
       enhancedPrompt: response.object.enhancedPrompt,
-      improvements: response.object.improvements,
       originalPrompt: args.userPrompt,
-      isReliable: response.object.isReliable,
-      unreliableReason: response.object.unreliableReason
+      isReliable: response.object.isReliable
     }
   }
 })

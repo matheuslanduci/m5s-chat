@@ -38,7 +38,6 @@ export function NavChats() {
   const togglePin = useMutation(api.chat.toggleChatPin)
   const deleteChat = useMutation(api.chat.deleteChat)
 
-  // Separate pinned and unpinned chats
   const pinnedChats = chats?.filter((chat) => chat.pinned) ?? []
   const unpinnedChats = chats?.filter((chat) => !chat.pinned) ?? []
 

@@ -1,5 +1,10 @@
+import { useModelSelection } from '@/hooks/use-model-selection'
+import type { BasicCategory } from '@/hooks/use-model-selection'
 import { useUser } from '@clerk/clerk-react'
+import type { StreamId } from '@convex-dev/persistent-text-streaming'
+import { useNavigate } from '@tanstack/react-router'
 import { useAction, useMutation, useQuery } from 'convex/react'
+import { Loader2 } from 'lucide-react'
 import type React from 'react'
 import {
   createContext,
@@ -41,8 +46,15 @@ export interface UserPreferences {
 }
 
 export interface ChatContextValue {
+  // Chat title
+  title: string
+
   // Messages
   messages: Message[]
+
+  // Streaming
+  currentStreamId: StreamId | null
+  shouldDriveStream: boolean // Whether this client should drive the stream
 
   // Input
   inputValue: string
@@ -70,24 +82,52 @@ export interface ChatContextValue {
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
 
-export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useUser()
+interface ChatProviderProps {
+  children: React.ReactNode
+  chatId?: Id<'chat'> // Optional chatId for existing chat mode
+}
 
-  // Local state
+export function ChatProvider({ children, chatId }: ChatProviderProps) {
+  const { user } = useUser()
+  const navigate = useNavigate()
+
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [currentStreamId, setCurrentStreamId] = useState<StreamId | null>(null)
+  const [shouldDriveStream, setShouldDriveStream] = useState(false)
 
-  // Queries and mutations
+  const { selection, selectedModel } = useModelSelection()
+
   const userPreferences = useQuery(api.userPreference.getUserPreferences)
+  const existingChat = useQuery(
+    api.chat.getChatById,
+    chatId ? { chatId } : 'skip'
+  )
+  const existingMessages = useQuery(
+    api.message.getMessagesByChatId,
+    chatId ? { chatId } : 'skip'
+  )
   const updateUserPreferencesMutation = useMutation(
     api.userPreference.upsertUserPreferences
   )
   const enhancePromptAction = useAction(api.ai.enhancePrompt)
+  const createChatAction = useAction(api.chat.createChat)
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
+  const sendMessageMutation = useMutation(api.message.sendMessage)
 
-  // Attachment functions
+  const title = existingChat?.title || 'New Chat'
+
+  // Set the current stream ID for existing chats
+  useEffect(() => {
+    if (existingChat?.streamId) {
+      setCurrentStreamId(existingChat.streamId as StreamId)
+      // Don't drive the stream for existing chats unless we're actively sending
+      setShouldDriveStream(false)
+    }
+  }, [existingChat?.streamId])
+
   const addAttachment = useCallback((attachment: Attachment) => {
     setAttachments((prev) => [...prev, attachment])
   }, [])
@@ -95,41 +135,35 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const removeAttachment = useCallback(
     async (attachmentId: Id<'attachment'>) => {
       try {
-        // Remove from local state immediately for better UX
         setAttachments((prev) => prev.filter((att) => att.id !== attachmentId))
 
-        // Delete from Convex storage
         await deleteAttachmentMutation({ attachmentId })
 
         toast.success('Attachment removed')
       } catch (error) {
         console.error('Failed to delete attachment:', error)
         toast.error('Failed to remove attachment')
-
-        // Restore attachment on error (you might want to refetch the actual state)
-        // For now, we'll just show an error message
       }
     },
     [deleteAttachmentMutation]
   )
 
-  const clearAttachments = useCallback(() => {
-    setAttachments([])
-  }, [])
+  const clearAttachments = useCallback(async () => {
+    try {
+      setAttachments([])
 
-  // Initialize with welcome message
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: '1',
-          role: 'assistant',
-          content: "Hello! I'm your AI assistant. How can I help you today?",
-          timestamp: new Date()
-        }
-      ])
+      await Promise.all(
+        attachments.map((attachment) =>
+          deleteAttachmentMutation({ attachmentId: attachment.id })
+        )
+      )
+
+      toast.success('All attachments cleared')
+    } catch (error) {
+      console.error('Failed to clear attachments:', error)
+      toast.error('Failed to clear some attachments')
     }
-  }, [messages.length])
+  }, [deleteAttachmentMutation, attachments])
 
   // Preferences update function
   const updateUserPreference = useCallback(
@@ -144,32 +178,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [user?.id, updateUserPreferencesMutation]
-  )
-
-  // Mock AI response (you can replace this with actual AI integration)
-  const simulateAIResponse = useCallback(
-    async (userMessage: string): Promise<string> => {
-      // Simulate API delay
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 + Math.random() * 2000)
-      )
-
-      const responses = [
-        "That's a great question! Let me think about that...",
-        "I understand what you're asking. Here's my perspective:",
-        "Interesting! I'd be happy to help you with that.",
-        "That's something I can definitely assist you with.",
-        "Great point! Here's what I think about that:",
-        "I see what you're getting at. Let me provide some insights:"
-      ]
-
-      const randomResponse =
-        responses[Math.floor(Math.random() * responses.length)]
-      const elaboration = ` Based on your message about "${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}", I can see you're interested in exploring this topic further.`
-
-      return randomResponse + elaboration
-    },
-    []
   )
 
   // Enhance prompt function
@@ -187,9 +195,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setInputValue(result.enhancedPrompt)
       } else {
         toast.warning('Unable to enhance prompt', {
-          description:
-            result.unreliableReason ||
-            'The prompt appears to be unclear or invalid.'
+          description: 'The prompt appears to be unclear or invalid.'
         })
       }
     } catch (error) {
@@ -207,69 +213,95 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     userPreferences?.generalPrompt
   ])
 
-  // Send message function
   const send = useCallback(async () => {
     if ((!inputValue.trim() && attachments.length === 0) || isLoading) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content:
-        inputValue.trim() ||
-        (attachments.length > 0 ? '[File(s) attached]' : ''),
-      timestamp: new Date(),
-      attachments: attachments.length > 0 ? [...attachments] : undefined
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInputValue('')
-    clearAttachments() // Clear attachments after sending
-    setIsLoading(true)
-
-    // Add typing indicator
-    const typingMessage: Message = {
-      id: `typing-${Date.now()}`,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isTyping: true
-    }
-    setMessages((prev) => [...prev, typingMessage])
+    const messageContent = inputValue.trim()
+    if (!messageContent && attachments.length === 0) return
 
     try {
-      const response = await simulateAIResponse(userMessage.content)
+      setIsLoading(true)
 
-      // Remove typing indicator and add actual response
-      setMessages((prev) => {
-        const withoutTyping = prev.filter((msg) => !msg.isTyping)
-        return [
-          ...withoutTyping,
-          {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: response,
-            timestamp: new Date()
+      if (chatId) {
+        const { streamId } = await sendMessageMutation({
+          chatId,
+          content: messageContent || '[File(s) attached]',
+          attachments: attachments.map((att) => att.id)
+        })
+
+        // Clear input and attachments
+        setInputValue('')
+        setAttachments([])
+
+        // Set up streaming for AI response
+        if (streamId) {
+          setCurrentStreamId(streamId as StreamId)
+          setShouldDriveStream(true) // This client drives the stream
+        }
+
+        toast.success('Message sent!')
+      } else {
+        // New chat mode - create new chat
+        // Determine model selection parameters based on current selection
+        let modelType: 'auto' | 'category' | 'key'
+        let model: string | undefined
+        let category: string | undefined
+
+        switch (selection.mode) {
+          case 'auto':
+            modelType = 'auto'
+            break
+          case 'category': {
+            modelType = 'category'
+            category = selection.category
+            break
           }
-        ]
-      })
+          case 'model': {
+            modelType = 'key'
+            model = selectedModel?.key
+            break
+          }
+          default:
+            modelType = 'auto'
+        }
+
+        const result = await createChatAction({
+          prompt: messageContent || '[File(s) attached]',
+          modelType,
+          model,
+          category: category as BasicCategory
+        })
+
+        setCurrentStreamId(result.streamId as StreamId)
+        setShouldDriveStream(true) // This client drives the stream
+
+        setInputValue('')
+        setAttachments([])
+
+        navigate({
+          to: '/chat/$chatId',
+          params: { chatId: result.chatId }
+        })
+
+        toast.success('Chat created successfully!')
+      }
     } catch (error) {
       console.error('Failed to send message:', error)
-      setMessages((prev) => {
-        const withoutTyping = prev.filter((msg) => !msg.isTyping)
-        return [
-          ...withoutTyping,
-          {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: 'Sorry, I encountered an error. Please try again.',
-            timestamp: new Date()
-          }
-        ]
-      })
+      toast.error('Failed to send message. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, isLoading, attachments, simulateAIResponse, clearAttachments])
+  }, [
+    inputValue,
+    attachments,
+    isLoading,
+    chatId,
+    sendMessageMutation,
+    selection,
+    selectedModel,
+    createChatAction,
+    navigate
+  ])
 
   // Pause function
   const pause = useCallback(() => {
@@ -279,18 +311,56 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Clear history function
   const clearHistory = useCallback(() => {
-    setMessages([
-      {
-        id: '1',
-        role: 'assistant',
-        content: "Hello! I'm your AI assistant. How can I help you today?",
-        timestamp: new Date()
-      }
-    ])
+    setMessages([])
   }, [])
 
+  // Messages logic - use existing messages in chatId mode, local state in new chat mode
+  const displayMessages =
+    chatId && existingMessages
+      ? existingMessages.map((msg) => ({
+          id: msg._id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg._creationTime),
+          attachments: [] // TODO: Handle attachments properly
+        }))
+      : messages
+
+  // Handle loading state for existing chat
+  if (chatId && existingChat === undefined) {
+    return (
+      <div className="flex flex-col flex-1 min-w-0 bg-background">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="animate-spin h-8 w-8 mb-4 mx-auto text-muted-foreground" />
+            <p className="text-muted-foreground">Loading chat...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle chat not found
+  if (chatId && existingChat === null) {
+    return (
+      <div className="flex flex-col flex-1 min-w-0 bg-background">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Chat not found</h2>
+            <p className="text-muted-foreground">
+              The chat you're looking for doesn't exist or you don't have access
+              to it.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const value: ChatContextValue = {
-    messages,
+    messages: displayMessages,
+    currentStreamId,
+    shouldDriveStream,
     inputValue,
     setInputValue,
     attachments,
@@ -303,7 +373,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     enhancePrompt,
     isLoading,
     userPreferences: userPreferences || null,
-    updateUserPreference
+    updateUserPreference,
+    title
   }
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
@@ -315,29 +386,4 @@ export function useChat() {
     throw new Error('useChat must be used within a ChatProvider')
   }
   return context
-}
-
-// Keep legacy types for backward compatibility
-export type BasicCategory =
-  | 'Programming'
-  | 'Roleplay'
-  | 'Marketing'
-  | 'SEO'
-  | 'Technology'
-  | 'Science'
-  | 'Translation'
-  | 'Legal'
-  | 'Finance'
-  | 'Health'
-  | 'Trivia'
-  | 'Academia'
-
-export type AdvancedModel = string
-
-export interface ModelSelection {
-  mode: 'basic' | 'advanced' | 'auto'
-  isAuto: boolean
-  basic?: BasicCategory
-  advanced?: AdvancedModel
-  modelKey?: string
 }

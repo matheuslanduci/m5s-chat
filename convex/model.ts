@@ -1,8 +1,38 @@
 import { type Infer, v } from 'convex/values'
-import { internalQuery, query } from './_generated/server'
+import { internal } from './_generated/api'
+import type { Doc } from './_generated/dataModel'
+import { internalAction, internalQuery, query } from './_generated/server'
 import { generateCategory } from './ai'
 import { clientInputError, serverError, unauthorized } from './error'
 import { category } from './schema'
+
+// Internal queries to wrap database operations
+export const _getModelByKey = internalQuery({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('model')
+      .withIndex('byKey', (q) => q.eq('key', args.key))
+      .first()
+  }
+})
+
+export const _getBestModelByCategory = internalQuery({
+  args: { category },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('bestModel')
+      .withIndex('byCategory', (q) => q.eq('category', args.category))
+      .first()
+  }
+})
+
+export const _getModelById = internalQuery({
+  args: { modelId: v.id('model') },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.modelId)
+  }
+})
 
 // Public queries for UI
 export const getAllModels = query({
@@ -113,14 +143,14 @@ export const getModelByKey = query({
   }
 })
 
-export const _getModel = internalQuery({
+export const _getModel = internalAction({
   args: {
     type: v.union(v.literal('key'), v.literal('category'), v.literal('auto')),
     selectedModel: v.optional(v.string()),
     selectedCategory: v.optional(category),
     prompt: v.string()
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Doc<'model'>> => {
     const { selectedModel } = args
 
     if (args.type === 'key') {
@@ -128,10 +158,9 @@ export const _getModel = internalQuery({
         throw clientInputError
       }
 
-      const model = await ctx.db
-        .query('model')
-        .withIndex('byKey', (q) => q.eq('key', selectedModel))
-        .first()
+      const model = await ctx.runQuery(internal.model._getModelByKey, {
+        key: selectedModel
+      })
 
       if (!model) {
         throw clientInputError
@@ -151,16 +180,17 @@ export const _getModel = internalQuery({
       throw clientInputError
     }
 
-    const result = await ctx.db
-      .query('bestModel')
-      .withIndex('byCategory', (q) => q.eq('category', selectedCategory))
-      .first()
+    const result = await ctx.runQuery(internal.model._getBestModelByCategory, {
+      category: selectedCategory
+    })
 
     if (!result) {
       throw serverError
     }
 
-    const model = await ctx.db.get(result.model)
+    const model = await ctx.runQuery(internal.model._getModelById, {
+      modelId: result.model
+    })
 
     if (!model) {
       throw serverError

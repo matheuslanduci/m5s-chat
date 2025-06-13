@@ -24,9 +24,11 @@ export function AttachmentPreview({
   name
 }: AttachmentPreviewProps) {
   const { removeAttachment } = useChat()
+  const [open, setOpen] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
 
-  const handleRemove = async () => {
+  const handleRemove = async (event: React.MouseEvent) => {
+    event.stopPropagation() // Prevent triggering the hover card
     try {
       setIsRemoving(true)
       await removeAttachment(attachmentId)
@@ -37,15 +39,28 @@ export function AttachmentPreview({
     }
   }
 
+  const handleTriggerClick = (event: React.MouseEvent) => {
+    // On mobile/touch devices, toggle the hover card
+    // On desktop, let the natural hover behavior handle it unless explicitly clicked
+    event.preventDefault()
+    setOpen(!open)
+  }
+
   return (
-    <HoverCard>
+    <HoverCard open={open} onOpenChange={setOpen}>
       <HoverCardTrigger asChild>
-        <div className="relative inline-flex items-center gap-2 bg-muted px-3 py-2 rounded-lg border cursor-pointer">
+        <button 
+          type="button"
+          className="relative inline-flex items-center gap-2 bg-muted px-2 py-1 rounded-md border cursor-pointer hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          onClick={handleTriggerClick}
+          aria-expanded={open}
+          aria-label={`Preview ${name}`}
+        >
           <div className="flex items-center gap-2">
             {format === 'image' ? (
-              <FileImage className="size-4 text-blue-500" />
+              <FileImage className="size-4 text-primary" />
             ) : (
-              <FileText className="size-4 text-red-500" />
+              <FileText className="size-4 text-primary" />
             )}
             <span className="text-sm font-medium truncate max-w-[120px]">
               {name}
@@ -65,7 +80,7 @@ export function AttachmentPreview({
               <X className="size-3" />
             )}
           </Button>
-        </div>
+        </button>
       </HoverCardTrigger>
       <HoverCardContent className="w-80 p-3">
         <div className="space-y-2">

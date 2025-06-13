@@ -1,21 +1,26 @@
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { ChatMessage } from '@/components/chat-message'
+import { StreamingMessage } from '@/components/streaming-message'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { useChat } from '@/context/chat-context'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 export function ChatMessages() {
-  const { messages } = useChat()
+  const { messages, currentStreamId, shouldDriveStream } = useChat()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     const scrollContainer = scrollAreaRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     )
     if (scrollContainer) {
       scrollContainer.scrollTop = scrollContainer.scrollHeight
     }
-  }, [messages])
+  }, [])
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, scrollToBottom])
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -24,6 +29,13 @@ export function ChatMessages() {
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
+          {currentStreamId && (
+            <StreamingMessage
+              streamId={currentStreamId}
+              shouldStream={shouldDriveStream}
+              onTextUpdate={scrollToBottom}
+            />
+          )}
         </div>
       </ScrollArea>
     </div>

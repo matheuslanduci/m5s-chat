@@ -8,13 +8,14 @@ import { z } from 'zod'
 import { components, internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import {
+  action,
   httpAction,
   internalMutation,
   internalQuery,
   mutation,
   query
 } from './_generated/server'
-import { generateTitle, streamText } from './ai'
+import { streamText } from './ai'
 import { notFoundError, unauthorized } from './error'
 import { category } from './schema'
 
@@ -22,7 +23,29 @@ const persistentTextStreaming = new PersistentTextStreaming(
   components.persistentTextStreaming
 )
 
-export const createChat = mutation({
+export const _insertChat = internalMutation({
+  args: {
+    userId: v.string(),
+    streamId: v.string(),
+    title: v.optional(v.string()),
+    selectedModel: v.id('model'),
+    initialPrompt: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const chatId: Id<'chat'> = await ctx.db.insert('chat', {
+      userId: args.userId,
+      streamId: args.streamId,
+      title: args.title,
+      selectedModel: args.selectedModel,
+      initialPrompt: args.initialPrompt,
+      pinned: false
+    })
+
+    return chatId
+  }
+})
+
+export const createChat = action({
   args: {
     prompt: v.string(),
     modelType: v.union(
@@ -45,8 +68,8 @@ export const createChat = mutation({
 
     const [streamId, title, model] = (await Promise.all([
       persistentTextStreaming.createStream(ctx),
-      generateTitle(args.prompt),
-      ctx.runQuery(internal.model._getModel, {
+      ctx.runAction(internal.ai.generateTitle, { prompt: args.prompt }),
+      ctx.runAction(internal.model._getModel, {
         type: args.modelType,
         selectedModel: args.model,
         selectedCategory: args.category,
@@ -54,16 +77,18 @@ export const createChat = mutation({
       })
     ])) as [StreamId, string, Doc<'model'>]
 
-    const chatId: Id<'chat'> = await ctx.db.insert('chat', {
-      pinned: false,
-      userId: user.subject,
-      selectedModel: model._id,
-      title,
-      streamId,
-      initialPrompt: args.prompt
-    })
+    const chatId: Id<'chat'> = await ctx.runMutation(
+      internal.chat._insertChat,
+      {
+        userId: user.subject,
+        streamId,
+        title,
+        selectedModel: model._id,
+        initialPrompt: args.prompt
+      }
+    )
 
-    return { chatId, streamId, title, model }
+    return { chatId, streamId, title, modelId: model._id }
   }
 })
 
@@ -224,8 +249,11 @@ export const getUserChats = query({
       _id: v.id('chat'),
       _creationTime: v.number(),
       userId: v.string(),
+      selectedModel: v.id('model'),
       title: v.optional(v.string()),
       pinned: v.boolean(),
+      streamId: v.optional(v.string()),
+      contextLength: v.optional(v.number()),
       initialPrompt: v.optional(v.string())
     })
   ),
@@ -326,5 +354,24 @@ export const deleteChat = mutation({
     await ctx.db.delete(args.chatId)
 
     return null
+  }
+})
+
+export const _updateChatTitle = internalMutation({
+  args: {
+    chatId: v.id('chat'),
+    title: v.string(),
+    userId: v.string()
+  },
+  handler: async (ctx, args) => {
+    // Verify the user owns the chat before updating
+    const chat = await ctx.db.get(args.chatId)
+    if (!chat || chat.userId !== args.userId) {
+      throw new Error('Chat not found or access denied')
+    }
+
+    await ctx.db.patch(args.chatId, {
+      title: args.title
+    })
   }
 })

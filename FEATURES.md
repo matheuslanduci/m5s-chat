@@ -1,10 +1,11 @@
 [x] Authentication
-[ ] Multiple models
-[ ] Instead of showing models, we'll have a "noob support" where people will
+[x] Multiple models
+[x] Instead of showing models, we'll have a "noob support" where people will
 pick the category/or AI will decide the best model to go to.
-[ ] Enhance prompt via Gemini 2.0 flash
-  - Save the original input, allow retries and 
+[x] Enhance prompt via Gemini 2.0 flash
 [ ] The initial input should be saved across devices
+  Cancelled - it's kinda weird and across tabs usually we don't want something 
+  like this because the user is usually seeking different prompts
 [ ] Chat history
 [ ] Synchronization on streaming response
   - I think Convex communicates directly with the API instead of going 
@@ -28,6 +29,7 @@ pick the category/or AI will decide the best model to go to.
 [ ] Billing support with Clerk Billing
 [ ] Change title of the chat manually or regenerate with AI
 [ ] Support Reasoning
+[ ] Redesign
 
 ---
 

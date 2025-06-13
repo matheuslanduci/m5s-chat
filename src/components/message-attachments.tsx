@@ -21,6 +21,12 @@ export function MessageAttachments({ attachments }: MessageAttachmentsProps) {
             <div
               className="flex items-center gap-2 p-2 border rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer max-w-sm"
               onClick={() => window.open(attachment.url, '_blank')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  window.open(attachment.url, '_blank')
+                }
+              }}
             >
               {attachment.format === 'image' ? (
                 <>
