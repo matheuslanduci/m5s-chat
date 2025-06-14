@@ -48,6 +48,7 @@ export default defineSchema({
   }).index('byUserId', ['userId']),
   chat: defineTable({
     userId: v.string(),
+    id: v.string(),
     selectedModel: v.id('model'),
     title: v.optional(v.string()),
     pinned: v.boolean(),
@@ -55,6 +56,7 @@ export default defineSchema({
     contextLength: v.optional(v.number()),
     initialPrompt: v.optional(v.string())
   })
+    .index('byId', ['id'])
     .index('byUserId', ['userId'])
     .index('byStreamIdAndUserId', ['streamId', 'userId']),
   message: defineTable({

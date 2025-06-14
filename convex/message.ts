@@ -43,20 +43,19 @@ export const sendMessage = mutation({
       throw unauthorized
     }
 
-    // Verify the user owns this chat
     const chat = await ctx.db.get(args.chatId)
+
     if (!chat || chat.userId !== user.subject) {
       throw notFoundError
     }
 
-    // Insert the user message
     const messageId = await ctx.db.insert('message', {
       chatId: args.chatId,
       role: 'user',
       content: args.content,
       attachments: args.attachments ?? [],
       status: 'completed',
-      tokens: 0, // User messages don't have token costs
+      tokens: 0,
       verticalIndex: Date.now(),
       horizontalIndex: 0
     })

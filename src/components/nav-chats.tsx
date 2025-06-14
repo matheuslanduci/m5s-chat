@@ -56,7 +56,7 @@ export function NavChats() {
 
   const handleDeleteChat = async (chatId: Id<'chat'>) => {
     try {
-      if (pathname.includes(chatId)) {
+      if (pathname.includes('/chat/')) {
         await navigate({ to: '/' })
       }
 

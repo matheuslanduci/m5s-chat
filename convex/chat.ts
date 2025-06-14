@@ -27,6 +27,7 @@ export const _insertChat = internalMutation({
   args: {
     userId: v.string(),
     streamId: v.string(),
+    id: v.string(),
     title: v.optional(v.string()),
     selectedModel: v.id('model'),
     initialPrompt: v.optional(v.string())
@@ -38,6 +39,7 @@ export const _insertChat = internalMutation({
       title: args.title,
       selectedModel: args.selectedModel,
       initialPrompt: args.initialPrompt,
+      id: args.id,
       pinned: false
     })
 
@@ -56,6 +58,7 @@ export const createChat = action({
       // When a model was not picked and AI will choose the best model
       v.literal('auto')
     ),
+    id: v.string(),
     model: v.optional(v.string()), // Present if modelType is 'key'
     category: v.optional(category) // Present if modelType is 'category'
   },
@@ -97,7 +100,8 @@ export const createChat = action({
         streamId,
         title,
         selectedModel: model._id,
-        initialPrompt: args.prompt
+        initialPrompt: args.prompt,
+        id: args.id
       }
     )
 
@@ -284,19 +288,6 @@ export const _insertMessage = internalMutation({
 // Get user's chat history
 export const getUserChats = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id('chat'),
-      _creationTime: v.number(),
-      userId: v.string(),
-      selectedModel: v.id('model'),
-      title: v.optional(v.string()),
-      pinned: v.boolean(),
-      streamId: v.optional(v.string()),
-      contextLength: v.optional(v.number()),
-      initialPrompt: v.optional(v.string())
-    })
-  ),
   handler: async (ctx) => {
     const user = await ctx.auth.getUserIdentity()
 
@@ -310,29 +301,17 @@ export const getUserChats = query({
   }
 })
 
-// Get chat by ID
 export const getChatById = query({
-  args: { chatId: v.id('chat') },
-  returns: v.union(
-    v.object({
-      _id: v.id('chat'),
-      _creationTime: v.number(),
-      userId: v.string(),
-      selectedModel: v.id('model'),
-      title: v.optional(v.string()),
-      pinned: v.boolean(),
-      streamId: v.optional(v.string()),
-      contextLength: v.optional(v.number()),
-      initialPrompt: v.optional(v.string())
-    }),
-    v.null()
-  ),
+  args: { id: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
 
     if (!user) throw unauthorized
 
-    const chat = await ctx.db.get(args.chatId)
+    const chat = await ctx.db
+      .query('chat')
+      .withIndex('byId', (q) => q.eq('id', args.id))
+      .first()
 
     if (!chat || chat.userId !== user.subject) {
       return null
@@ -345,7 +324,6 @@ export const getChatById = query({
 // Pin/unpin a chat
 export const toggleChatPin = mutation({
   args: { chatId: v.id('chat') },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
 
@@ -368,7 +346,6 @@ export const toggleChatPin = mutation({
 // Delete a chat
 export const deleteChat = mutation({
   args: { chatId: v.id('chat') },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
 

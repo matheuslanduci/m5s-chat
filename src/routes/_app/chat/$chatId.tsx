@@ -7,10 +7,8 @@ import type { Id } from '../../../../convex/_generated/dataModel'
 export const Route = createFileRoute('/_app/chat/$chatId')({
   component: ChatComponent,
   loader: ({ params }) => {
-    // Validate chatId format (basic validation)
-    if (!params.chatId) {
-      throw notFound()
-    }
+    if (!params.chatId) throw notFound()
+
     return { chatId: params.chatId as Id<'chat'> }
   }
 })

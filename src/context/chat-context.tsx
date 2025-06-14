@@ -46,11 +46,12 @@ export type ChatContextValue = {
   messages: Message[]
 
   // Streaming
+  isStreaming: boolean
   currentStreamId: StreamId | null
-  drivenIds: Set<StreamId> // Set of stream IDs that this client should drive
-  addDrivenId: (streamId: StreamId) => void // Helper to add a stream ID to drive
-  removeDrivenId: (streamId: StreamId) => void // Helper to remove a stream ID from drive
-  clearDrivenIds: () => void // Helper to clear all driven IDs
+  drivenIds: Set<StreamId>
+  addDrivenId: (streamId: StreamId) => void
+  removeDrivenId: (streamId: StreamId) => void
+  clearDrivenIds: () => void
 
   // Input
   inputValue: string
@@ -83,13 +84,14 @@ const ChatContext = createContext<ChatContextValue | undefined>(undefined)
 
 interface ChatProviderProps {
   children: React.ReactNode
-  chatId?: Id<'chat'> // Optional chatId for existing chat mode
+  chatId?: string
 }
 
 export function ChatProvider({ children, chatId }: ChatProviderProps) {
   const { user } = useUser()
   const navigate = useNavigate()
-  const [messages, setMessages] = useState<Message[]>([])
+
+  const [isStreaming, setIsStreaming] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
@@ -101,11 +103,11 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
   const userPreferences = useQuery(api.userPreference.getUserPreferences)
   const existingChat = useQuery(
     api.chat.getChatById,
-    chatId ? { chatId } : 'skip'
+    chatId ? { id: chatId } : 'skip'
   )
   const existingMessages = useQuery(
     api.message.getMessagesByChatId,
-    chatId ? { chatId } : 'skip'
+    existingChat ? { chatId: existingChat._id } : 'skip'
   )
   const updateUserPreferencesMutation = useMutation(
     api.userPreference.upsertUserPreferences
@@ -115,7 +117,8 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
   const sendMessageMutation = useMutation(api.message.sendMessage)
 
-  const title = existingChat?.title || 'New Chat' // Set the current stream ID for existing chats
+  const title = existingChat?.title || 'New Chat'
+
   useEffect(() => {
     if (existingChat?.streamId) {
       setCurrentStreamId(existingChat.streamId as StreamId)
@@ -218,9 +221,9 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
     try {
       setIsLoading(true)
 
-      if (chatId) {
+      if (existingChat) {
         const { streamId } = await sendMessageMutation({
-          chatId,
+          chatId: existingChat._id,
           content: messageContent || '[File(s) attached]',
           attachments: attachments.map((att) => att.id)
         })
@@ -235,8 +238,14 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
 
         toast.success('Message sent!')
       } else {
-        // New chat mode - create new chat
-        // Determine model selection parameters based on current selection
+        const chatId = crypto.randomUUID()
+
+        await navigate({
+          to: '/chat/$chatId',
+          params: { chatId },
+          viewTransition: true
+        })
+
         let modelType: 'auto' | 'category' | 'key'
         let model: string | undefined
         let category: string | undefined
@@ -258,24 +267,24 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
           default:
             modelType = 'auto'
         }
+
         const result = await createChatAction({
           prompt: messageContent || '[File(s) attached]',
           modelType,
           model,
+          id: chatId,
           category: category as BasicCategory
         })
 
         setCurrentStreamId(result.streamId as StreamId)
-        setDrivenIds((prev) => new Set([...prev, result.streamId as StreamId])) // This client drives the stream
+        setDrivenIds((prev) => {
+          prev.add(result.streamId)
+          return prev
+        })
+        setIsStreaming(true)
 
         setInputValue('')
         setAttachments([])
-
-        await navigate({
-          to: '/chat/$chatId',
-          params: { chatId: result.chatId },
-          viewTransition: true
-        })
       }
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -287,22 +296,19 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
     inputValue,
     attachments,
     isLoading,
-    chatId,
     sendMessageMutation,
     selection,
     selectedModel,
     createChatAction,
-    navigate
+    navigate,
+    existingChat
   ])
 
   const pause = useCallback(() => {
     setIsLoading(false)
-    //setMessages((prev) => prev.filter((msg) => !msg.isTyping))
   }, [])
 
-  const clearHistory = useCallback(() => {
-    setMessages([])
-  }, [])
+  const clearHistory = useCallback(() => {}, [])
 
   // Helper functions for managing driven IDs
   const addDrivenId = useCallback((streamId: StreamId) => {
@@ -334,24 +340,25 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
     )
   }
 
-  if (chatId && existingChat === null) {
-    return (
-      <div className="flex flex-col flex-1 min-w-0 bg-background">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Chat not found</h2>
-            <p className="text-muted-foreground">
-              The chat you're looking for doesn't exist or you don't have access
-              to it.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // if (chatId && existingChat === null) {
+  //   return (
+  //     <div className="flex flex-col flex-1 min-w-0 bg-background">
+  //       <div className="flex-1 flex items-center justify-center">
+  //         <div className="text-center">
+  //           <h2 className="text-xl font-semibold mb-2">Chat not found</h2>
+  //           <p className="text-muted-foreground">
+  //             The chat you're looking for doesn't exist or you don't have access
+  //             to it.
+  //           </p>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   const value: ChatContextValue = {
-    messages: existingMessages || messages,
+    messages: existingMessages || [],
+    isStreaming,
     currentStreamId,
     drivenIds,
     addDrivenId,
