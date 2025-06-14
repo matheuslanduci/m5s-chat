@@ -13,17 +13,65 @@ import {
   type BasicCategory,
   useModelSelection
 } from '@/hooks/use-model-selection'
-import { Bot, ChevronDown, Loader2, Settings, Zap } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import {
+  Bot,
+  Brain,
+  ChevronDown,
+  Code,
+  DollarSign,
+  FileText,
+  Globe,
+  GraduationCap,
+  Heart,
+  HelpCircle,
+  Lightbulb,
+  Loader2,
+  Settings,
+  Shield,
+  TrendingUp,
+  Users,
+  Zap
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import type { Id } from '../../convex/_generated/dataModel'
 import { CategoryGrid } from './category-grid'
 import { ModelList } from './model-list'
+import {
+  AnthropicIcon,
+  DeepSeekIcon,
+  GoogleIcon,
+  OpenAIIcon
+} from './provider-icons'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface ModelSelectorProps {
   onClose?: () => void
 }
+
+// Category to icon mapping
+const categoryIcons = {
+  Programming: Code,
+  Roleplay: Users,
+  Marketing: TrendingUp,
+  SEO: Globe,
+  Technology: Lightbulb,
+  Science: Brain,
+  Translation: FileText,
+  Legal: Shield,
+  Finance: DollarSign,
+  Health: Heart,
+  Trivia: HelpCircle,
+  Academia: GraduationCap
+} as const
+
+// Provider to icon mapping
+const providerIcons = {
+  openai: OpenAIIcon,
+  google: GoogleIcon,
+  anthropic: AnthropicIcon,
+  deepseek: DeepSeekIcon
+} as const
 
 export function ModelSelector({ onClose }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -35,9 +83,38 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
     setAutoMode,
     setCategoryMode,
     setModelMode,
-    displayName
+    displayName,
+    selectedModel
   } = useModelSelection()
   const { categoriesWithModels } = useBestModels()
+  // Get the appropriate icon based on current selection
+  const SelectionIcon = useMemo(() => {
+    if (isLoading) {
+      return Loader2
+    }
+
+    switch (selection.mode) {
+      case 'auto':
+        return Zap
+      case 'category':
+        if (selection.category && categoryIcons[selection.category]) {
+          return categoryIcons[selection.category]
+        }
+        return Bot
+      case 'model':
+        if (
+          selectedModel?.provider &&
+          providerIcons[selectedModel.provider as keyof typeof providerIcons]
+        ) {
+          return providerIcons[
+            selectedModel.provider as keyof typeof providerIcons
+          ]
+        }
+        return Bot
+      default:
+        return Bot
+    }
+  }, [selection, selectedModel, isLoading])
 
   const resetTabs = useCallback(() => {
     if (selection.mode === 'auto') {
@@ -50,7 +127,6 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
 
     return setSelectedTab(selection.mode === 'category' ? 'basic' : 'advanced')
   }, [selection.mode, isOpen])
-
   const [selectedTab, setSelectedTab] = useState<'basic' | 'advanced'>(
     selection.mode === 'auto'
       ? 'basic'
@@ -63,6 +139,20 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
     typeof window !== 'undefined' &&
     /Mac|iPhone|iPad|iPod/.test(navigator.platform)
   const shortcutKey = isMac ? '⌘' : 'Ctrl'
+
+  const tooltipText = useMemo(() => {
+    const baseText = `Select AI model (${shortcutKey} + L)`
+    switch (selection.mode) {
+      case 'auto':
+        return `${baseText} • Auto mode active`
+      case 'category':
+        return `${baseText} • Category: ${selection.category}`
+      case 'model':
+        return `${baseText} • Model: ${selectedModel?.name || 'Unknown'}`
+      default:
+        return baseText
+    }
+  }, [selection, selectedModel, shortcutKey])
 
   useHotkeys(
     'meta+l,ctrl+l',
@@ -114,11 +204,16 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
   }
 
   useEffect(() => {
-    resetTabs()
+    const timeout = setTimeout(() => {
+      resetTabs()
+    }, 200)
+
+    return () => clearTimeout(timeout)
   }, [resetTabs])
 
   return (
     <>
+      {' '}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -127,23 +222,19 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
             className="gap-2 text-left justify-start h-7 px-2 text-xs font-normal"
             onClick={() => setIsOpen(!isOpen)}
           >
-            {isLoading ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Bot className="size-3" />
-            )}
+            <SelectionIcon
+              className={`size-3 ${isLoading ? 'animate-spin' : ''}`}
+            />
             <span className="flex-1 truncate">{displayName}</span>
             <ChevronDown className="size-3" />
           </Button>
-        </TooltipTrigger>
-
+        </TooltipTrigger>{' '}
         <TooltipContent>
-          <p>Select AI model ({shortcutKey} + L)</p>
+          <p>{tooltipText}</p>
         </TooltipContent>
       </Tooltip>
-
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-2xl h-[90vh] sm:h-[80vh] max-h-[90vh] sm:max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-2xl h-[90vh] !max-h-[536px] sm:h-[80vh] sm:max-h-[80vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Bot className="size-5" />
@@ -217,14 +308,14 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
                 value="advanced"
                 className="mt-4 sm:mt-6 flex-1 flex flex-col min-h-0"
               >
-                <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex flex-col min-h-0">
                   <div className="flex items-center gap-2 mb-3 sm:mb-4 flex-shrink-0">
                     <h3 className="text-sm font-medium">Model Selection</h3>
                     <p className="text-[.625rem] sm:text-xs text-muted-foreground ml-auto">
                       Select a specific model for precise control
                     </p>
                   </div>
-                  <div className="flex-1 overflow-y-auto min-h-0">
+                  <div className="min-h-0">
                     <ModelList
                       models={models}
                       selectedModelId={

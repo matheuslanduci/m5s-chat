@@ -174,6 +174,10 @@ export const _getModel = internalAction({
 
     if (args.type === 'auto') {
       selectedCategory = await generateCategory(args.prompt)
+
+      if (selectedCategory === 'Other') {
+        selectedCategory = 'Trivia'
+      }
     }
 
     if (!selectedCategory) {

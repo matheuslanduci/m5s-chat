@@ -12,8 +12,8 @@ import {
 import { useChat } from '@/context/chat-context'
 import { useResponsiveAttachmentLimit } from '@/hooks/use-responsive-attachment-limit'
 import { ArrowUp, Sparkles, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { toast } from 'sonner'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useMemo, useRef } from 'react'
 
 export function ChatInput() {
   const {
@@ -22,6 +22,7 @@ export function ChatInput() {
     isLoading,
     send,
     attachments,
+    clearAttachments,
     enhancePrompt,
     removeAttachment
   } = useChat()
@@ -38,34 +39,10 @@ export function ChatInput() {
 
   const hiddenCount = attachments.length - attachmentLimit
 
-  // Bulk delete function with single toast
-  const handleBulkClearAttachments = useCallback(async () => {
-    if (attachments.length === 0) return
-
-    try {
-      // Delete all attachments concurrently for better performance
-      await Promise.all(
-        attachments.map((attachment) => removeAttachment(attachment.id))
-      )
-      toast.success(
-        `Cleared ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}`
-      )
-    } catch (error) {
-      console.error('Failed to clear attachments:', error)
-      toast.error('Failed to clear some attachments')
-    }
-  }, [attachments, removeAttachment])
-
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       send()
-    }
-  }
-
-  const handleEnhancePrompt = () => {
-    if (enhancePrompt) {
-      enhancePrompt()
     }
   }
 
@@ -81,48 +58,58 @@ export function ChatInput() {
   }, [])
 
   return (
-    <div className="p-4">
+    <div className="p-4 w-full">
       <div className="max-w-4xl mx-auto relative">
-        {attachments.length > 0 && (
-          <div className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background p-2 pb-16">
-            {visibleAttachments.map((attachment) => (
-              <AttachmentPreview
-                key={attachment.id}
-                attachmentId={attachment.id}
-                format={attachment.format}
-                url={attachment.url}
-                name={attachment.name}
-              />
-            ))}
+        <AnimatePresence>
+          {attachments.length > 0 && (
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{
+                y: 60,
+                opacity: 0
+              }}
+              className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background p-2 pb-16"
+            >
+              {visibleAttachments.map((attachment) => (
+                <AttachmentPreview
+                  key={attachment.id}
+                  attachmentId={attachment.id}
+                  format={attachment.format}
+                  url={attachment.url}
+                  name={attachment.name}
+                />
+              ))}
 
-            {hiddenCount > 0 && (
-              <AttachmentsDialog
-                attachments={attachments}
-                hiddenCount={hiddenCount}
-                onClearAll={handleBulkClearAttachments}
-                onRemoveAttachment={removeAttachment}
-              />
-            )}
+              {hiddenCount > 0 && (
+                <AttachmentsDialog
+                  attachments={attachments}
+                  hiddenCount={hiddenCount}
+                  onClearAll={clearAttachments}
+                  onRemoveAttachment={removeAttachment}
+                />
+              )}
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 z-10"
-                  onClick={handleBulkClearAttachments}
-                  disabled={isLoading}
-                >
-                  <X className="size-3" />
-                  <span className="sr-only">Clear attachments</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Clear all attachments</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 z-10"
+                    onClick={clearAttachments}
+                    disabled={isLoading}
+                  >
+                    <X className="size-3" />
+                    <span className="sr-only">Clear attachments</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Clear all attachments</p>
+                </TooltipContent>
+              </Tooltip>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="border rounded-2xl bg-background p-2 z-10 relative">
           <div className="mb-2">
@@ -138,7 +125,7 @@ export function ChatInput() {
             />
           </div>{' '}
           {/* Bottom Row: Model Selection, Attachment, Enhance & Send */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <ModelSelector onClose={handleModelSelectorClose} />
 
             <Tooltip>
@@ -148,7 +135,9 @@ export function ChatInput() {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Attach files</p>
+                {attachments.length >= 5
+                  ? 'Maximum 5 attachments allowed'
+                  : 'Attach files (images or PDFs)'}
               </TooltipContent>
             </Tooltip>
 
@@ -158,7 +147,7 @@ export function ChatInput() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={handleEnhancePrompt}
+                    onClick={enhancePrompt}
                     variant="ghost"
                     size="icon"
                     className="shrink-0 size-7 mr-2"

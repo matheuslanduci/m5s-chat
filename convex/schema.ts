@@ -13,7 +13,8 @@ export const category = v.union(
   v.literal('Finance'),
   v.literal('Health'),
   v.literal('Trivia'),
-  v.literal('Academia')
+  v.literal('Academia'),
+  v.literal('Other')
 )
 
 export default defineSchema({
@@ -70,6 +71,20 @@ export default defineSchema({
       v.literal('failed'),
       v.literal('retrying'),
       v.literal('queued')
+    ),
+    model: v.optional(
+      v.object({
+        id: v.optional(v.id('model')),
+        name: v.optional(v.string()),
+        provider: v.optional(
+          v.union(
+            v.literal('openai'),
+            v.literal('anthropic'),
+            v.literal('google'),
+            v.literal('deepseek')
+          )
+        )
+      })
     ),
     attachments: v.array(v.id('attachment'))
   }).index('byChatId', ['chatId']),

@@ -34,7 +34,6 @@ export const ModelList = memo(function ModelList({
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // Auto-focus when component mounts
     const timer = setTimeout(() => {
       searchInputRef.current?.focus()
     }, 100)
@@ -59,6 +58,7 @@ export const ModelList = memo(function ModelList({
   const filteredModels = models.filter((model) =>
     model.name.toLowerCase().includes(search.toLowerCase())
   )
+
   return (
     <div
       className={`space-y-3 ${disabled ? 'pointer-events-none opacity-60' : ''}`}
@@ -73,14 +73,13 @@ export const ModelList = memo(function ModelList({
           className="pl-10 h-9 text-sm"
           disabled={disabled}
           onKeyDown={(e) => {
-            // Prevent dropdown from closing when typing
             if (e.key !== 'Escape') {
               e.stopPropagation()
             }
           }}
         />
       </div>
-      <div className="max-h-48 overflow-y-auto space-y-1">
+      <div className="max-h-36 overflow-y-auto space-y-1">
         {filteredModels.map((model) => {
           const ProviderIcon = getProviderIcon(model.provider)
           const isSelected = selectedModelId === model._id
@@ -94,12 +93,12 @@ export const ModelList = memo(function ModelList({
               className={`text-sm h-9 px-3 rounded-md cursor-pointer w-full justify-start ${
                 isSelected
                   ? 'bg-primary/10 text-primary border border-primary/20'
-                  : 'hover:bg-muted/50'
+                  : 'hover:bg-muted/50 border border-transparent text-muted-foreground'
               } ${disabled ? 'cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center gap-2 w-full">
                 {ProviderIcon && (
-                  <ProviderIcon className="size-4 text-muted-foreground flex-shrink-0" />
+                  <ProviderIcon className="size-4 text-inherit flex-shrink-0" />
                 )}
                 <span className="flex-1 text-left">{model.name}</span>
               </div>

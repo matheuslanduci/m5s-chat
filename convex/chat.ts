@@ -62,19 +62,32 @@ export const createChat = action({
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
 
-    if (!user) {
-      throw unauthorized
-    }
+    if (!user) throw unauthorized
 
     const [streamId, title, model] = (await Promise.all([
       persistentTextStreaming.createStream(ctx),
-      ctx.runAction(internal.ai.generateTitle, { prompt: args.prompt }),
-      ctx.runAction(internal.model._getModel, {
-        type: args.modelType,
-        selectedModel: args.model,
-        selectedCategory: args.category,
-        prompt: args.prompt
-      })
+      ctx.runAction(internal.ai.generateTitle, { prompt: args.prompt }).catch(
+        () =>
+          // Fallback to a default title if the AI fails to generate one
+          `${
+            args.prompt.length > 32
+              ? `${args.prompt.slice(0, 32)}...`
+              : args.prompt
+          }`
+      ),
+      ctx
+        .runAction(internal.model._getModel, {
+          type: args.modelType,
+          selectedModel: args.model,
+          selectedCategory: args.category,
+          prompt: args.prompt
+        })
+        .catch(() => {
+          // Fallback to a default model if the AI fails to choose one
+          return ctx.runQuery(internal.model._getModelByKey, {
+            key: 'google/gemini-2.0-flash-001'
+          })
+        })
     ])) as [StreamId, string, Doc<'model'>]
 
     const chatId: Id<'chat'> = await ctx.runMutation(
@@ -88,6 +101,14 @@ export const createChat = action({
       }
     )
 
+    await ctx.runMutation(internal.chat._insertMessage, {
+      chatId,
+      role: 'user',
+      content: args.prompt,
+      status: 'completed',
+      tokens: 0
+    })
+
     return { chatId, streamId, title, modelId: model._id }
   }
 })
@@ -99,9 +120,7 @@ export const getChatBody = query({
   handler: async (ctx, { streamId }) => {
     const user = await ctx.auth.getUserIdentity()
 
-    if (!user) {
-      throw unauthorized
-    }
+    if (!user) throw unauthorized
 
     const chat = await ctx.db
       .query('chat')
@@ -110,9 +129,11 @@ export const getChatBody = query({
       )
       .first()
 
-    if (!chat) {
-      throw notFoundError
-    }
+    console.log(
+      `getChatBody: user=${user.subject}, streamId=${streamId}, chat=${chat?._id}`
+    )
+
+    if (!chat) throw notFoundError
 
     return await persistentTextStreaming.getStreamBody(
       ctx,
@@ -125,7 +146,15 @@ export const streamChat = httpAction(async (ctx, request) => {
   const user = await ctx.auth.getUserIdentity()
 
   if (!user) {
-    throw unauthorized
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    })
   }
 
   const body = await request.json()
@@ -141,7 +170,15 @@ export const streamChat = httpAction(async (ctx, request) => {
       JSON.stringify({
         error: 'Invalid request body. Expected { streamId: string }'
       }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
     )
   }
 
@@ -164,6 +201,9 @@ export const streamChat = httpAction(async (ctx, request) => {
         messages,
         model: chat.selectedModel,
         onTextPart: async (textPart) => {
+          console.log(
+            `streamChat: user=${user.subject}, streamId=${streamId}, textPart=${textPart}`
+          )
           await chunkAppender(textPart)
         },
         onFinish: async ({ text, usage }) => {

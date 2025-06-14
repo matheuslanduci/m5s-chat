@@ -122,11 +122,6 @@ export function FileUpload() {
         className="shrink-0 size-7"
         onClick={handleFileSelect}
         disabled={isUploading || attachments.length >= 5}
-        title={
-          attachments.length >= 5
-            ? 'Maximum 5 attachments allowed'
-            : 'Upload file'
-        }
       >
         {isUploading ? (
           <Loader2 className="size-3.5 animate-spin" />

@@ -54,7 +54,8 @@ export async function generateCategory(prompt: string) {
           'Finance',
           'Health',
           'Trivia',
-          'Academia'
+          'Academia',
+          'Other'
         ])
         .describe('The category of the content')
     }),

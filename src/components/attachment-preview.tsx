@@ -33,15 +33,15 @@ export function AttachmentPreview({
       setIsRemoving(true)
       await removeAttachment(attachmentId)
     } catch (error) {
-      // Error handling is done in the context
+      console.error('Failed to remove attachment:', error)
     } finally {
       setIsRemoving(false)
     }
   }
 
-  const handleTriggerClick = (event: React.MouseEvent) => {
-    // On mobile/touch devices, toggle the hover card
-    // On desktop, let the natural hover behavior handle it unless explicitly clicked
+  const handleTriggerClick = (
+    event: React.MouseEvent | React.KeyboardEvent<HTMLDivElement>
+  ) => {
     event.preventDefault()
     setOpen(!open)
   }
@@ -49,10 +49,14 @@ export function AttachmentPreview({
   return (
     <HoverCard open={open} onOpenChange={setOpen}>
       <HoverCardTrigger asChild>
-        <button 
-          type="button"
+        <div
           className="relative inline-flex items-center gap-2 bg-muted px-2 py-1 rounded-md border cursor-pointer hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           onClick={handleTriggerClick}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              handleTriggerClick(event)
+            }
+          }}
           aria-expanded={open}
           aria-label={`Preview ${name}`}
         >
@@ -70,7 +74,7 @@ export function AttachmentPreview({
           <Button
             variant="ghost"
             size="icon"
-            className="size-5 p-0 hover:bg-destructive hover:text-destructive-foreground"
+            className="size-5 p-0 hover:bg-destructive hover:text-destructive-foreground cursor-pointer"
             onClick={handleRemove}
             disabled={isRemoving}
           >
@@ -80,11 +84,11 @@ export function AttachmentPreview({
               <X className="size-3" />
             )}
           </Button>
-        </button>
+        </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-80 p-3">
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold">{name}</h4>
+          <h4 className="text-sm font-semibold truncate">{name}</h4>
           {format === 'image' ? (
             <div className="mt-2">
               <img

@@ -3,9 +3,9 @@
 [x] Instead of showing models, we'll have a "noob support" where people will
 pick the category/or AI will decide the best model to go to.
 [x] Enhance prompt via Gemini 2.0 flash
-[ ] The initial input should be saved across devices
+~~[ ] The initial input should be saved across devices
   Cancelled - it's kinda weird and across tabs usually we don't want something 
-  like this because the user is usually seeking different prompts
+  like this because the user is usually seeking different prompts~~
 [ ] Chat history
 [ ] Synchronization on streaming response
   - I think Convex communicates directly with the API instead of going 
@@ -30,6 +30,8 @@ pick the category/or AI will decide the best model to go to.
 [ ] Change title of the chat manually or regenerate with AI
 [ ] Support Reasoning
 [ ] Redesign
+[x] Allow send messaging without anything but attachments
+[ ] Allow BYOK
 
 ---
 

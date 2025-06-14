@@ -17,6 +17,7 @@ export type BasicCategory =
   | 'Health'
   | 'Trivia'
   | 'Academia'
+  | 'Other'
 
 export type ModelSelectionMode = 'auto' | 'category' | 'model'
 

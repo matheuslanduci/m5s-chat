@@ -15,26 +15,19 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
+import type { Doc, Id } from '../../convex/_generated/dataModel'
 
 // Types
-export interface Attachment {
+export type Attachment = {
   id: Id<'attachment'>
   format: 'image' | 'pdf'
   url: string
   name: string
 }
 
-export interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  isTyping?: boolean
-  attachments?: Attachment[]
-}
+type Message = Doc<'message'>
 
-export interface UserPreferences {
+export type UserPreferences = {
   theme?: string
   savedPrompt?: string
   generalPrompt?: string
@@ -45,7 +38,7 @@ export interface UserPreferences {
   autoSummarize?: boolean
 }
 
-export interface ChatContextValue {
+export type ChatContextValue = {
   // Chat title
   title: string
 
@@ -54,7 +47,10 @@ export interface ChatContextValue {
 
   // Streaming
   currentStreamId: StreamId | null
-  shouldDriveStream: boolean // Whether this client should drive the stream
+  drivenIds: Set<StreamId> // Set of stream IDs that this client should drive
+  addDrivenId: (streamId: StreamId) => void // Helper to add a stream ID to drive
+  removeDrivenId: (streamId: StreamId) => void // Helper to remove a stream ID from drive
+  clearDrivenIds: () => void // Helper to clear all driven IDs
 
   // Input
   inputValue: string
@@ -78,6 +74,9 @@ export interface ChatContextValue {
   // Preferences
   userPreferences: UserPreferences | null
   updateUserPreference: (updates: Partial<UserPreferences>) => Promise<void>
+
+  // Raw chat
+  chat: Doc<'chat'> | null
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
@@ -90,13 +89,12 @@ interface ChatProviderProps {
 export function ChatProvider({ children, chatId }: ChatProviderProps) {
   const { user } = useUser()
   const navigate = useNavigate()
-
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [currentStreamId, setCurrentStreamId] = useState<StreamId | null>(null)
-  const [shouldDriveStream, setShouldDriveStream] = useState(false)
+  const [drivenIds, setDrivenIds] = useState<Set<StreamId>>(new Set())
 
   const { selection, selectedModel } = useModelSelection()
 
@@ -117,14 +115,12 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
   const sendMessageMutation = useMutation(api.message.sendMessage)
 
-  const title = existingChat?.title || 'New Chat'
-
-  // Set the current stream ID for existing chats
+  const title = existingChat?.title || 'New Chat' // Set the current stream ID for existing chats
   useEffect(() => {
     if (existingChat?.streamId) {
       setCurrentStreamId(existingChat.streamId as StreamId)
       // Don't drive the stream for existing chats unless we're actively sending
-      setShouldDriveStream(false)
+      setDrivenIds(new Set())
     }
   }, [existingChat?.streamId])
 
@@ -231,12 +227,10 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
 
         // Clear input and attachments
         setInputValue('')
-        setAttachments([])
-
-        // Set up streaming for AI response
+        setAttachments([]) // Set up streaming for AI response
         if (streamId) {
           setCurrentStreamId(streamId as StreamId)
-          setShouldDriveStream(true) // This client drives the stream
+          setDrivenIds((prev) => new Set([...prev, streamId as StreamId])) // This client drives the stream
         }
 
         toast.success('Message sent!')
@@ -264,7 +258,6 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
           default:
             modelType = 'auto'
         }
-
         const result = await createChatAction({
           prompt: messageContent || '[File(s) attached]',
           modelType,
@@ -273,17 +266,16 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
         })
 
         setCurrentStreamId(result.streamId as StreamId)
-        setShouldDriveStream(true) // This client drives the stream
+        setDrivenIds((prev) => new Set([...prev, result.streamId as StreamId])) // This client drives the stream
 
         setInputValue('')
         setAttachments([])
 
-        navigate({
+        await navigate({
           to: '/chat/$chatId',
-          params: { chatId: result.chatId }
+          params: { chatId: result.chatId },
+          viewTransition: true
         })
-
-        toast.success('Chat created successfully!')
       }
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -303,30 +295,32 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
     navigate
   ])
 
-  // Pause function
   const pause = useCallback(() => {
     setIsLoading(false)
-    setMessages((prev) => prev.filter((msg) => !msg.isTyping))
+    //setMessages((prev) => prev.filter((msg) => !msg.isTyping))
   }, [])
 
-  // Clear history function
   const clearHistory = useCallback(() => {
     setMessages([])
   }, [])
 
-  // Messages logic - use existing messages in chatId mode, local state in new chat mode
-  const displayMessages =
-    chatId && existingMessages
-      ? existingMessages.map((msg) => ({
-          id: msg._id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg._creationTime),
-          attachments: [] // TODO: Handle attachments properly
-        }))
-      : messages
+  // Helper functions for managing driven IDs
+  const addDrivenId = useCallback((streamId: StreamId) => {
+    setDrivenIds((prev) => new Set([...prev, streamId]))
+  }, [])
 
-  // Handle loading state for existing chat
+  const removeDrivenId = useCallback((streamId: StreamId) => {
+    setDrivenIds((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(streamId)
+      return newSet
+    })
+  }, [])
+
+  const clearDrivenIds = useCallback(() => {
+    setDrivenIds(new Set())
+  }, [])
+
   if (chatId && existingChat === undefined) {
     return (
       <div className="flex flex-col flex-1 min-w-0 bg-background">
@@ -340,7 +334,6 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
     )
   }
 
-  // Handle chat not found
   if (chatId && existingChat === null) {
     return (
       <div className="flex flex-col flex-1 min-w-0 bg-background">
@@ -358,9 +351,12 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
   }
 
   const value: ChatContextValue = {
-    messages: displayMessages,
+    messages: existingMessages || messages,
     currentStreamId,
-    shouldDriveStream,
+    drivenIds,
+    addDrivenId,
+    removeDrivenId,
+    clearDrivenIds,
     inputValue,
     setInputValue,
     attachments,
@@ -374,7 +370,8 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
     isLoading,
     userPreferences: userPreferences || null,
     updateUserPreference,
-    title
+    title,
+    chat: existingChat || null
   }
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
@@ -382,8 +379,10 @@ export function ChatProvider({ children, chatId }: ChatProviderProps) {
 
 export function useChat() {
   const context = useContext(ChatContext)
+
   if (context === undefined) {
     throw new Error('useChat must be used within a ChatProvider')
   }
+
   return context
 }

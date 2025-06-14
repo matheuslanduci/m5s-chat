@@ -5,8 +5,12 @@ import { useChat } from '@/context/chat-context'
 import { useCallback, useEffect, useRef } from 'react'
 
 export function ChatMessages() {
-  const { messages, currentStreamId, shouldDriveStream } = useChat()
+  const { messages, currentStreamId, drivenIds, removeDrivenId } = useChat()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  console.log(
+    `ChatMessages: messages.length=${messages.length}, currentStreamId=${currentStreamId}, shouldStream=${currentStreamId ? drivenIds.has(currentStreamId) : false}`
+  )
 
   const scrollToBottom = useCallback(() => {
     const scrollContainer = scrollAreaRef.current?.querySelector(
@@ -27,13 +31,17 @@ export function ChatMessages() {
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
           {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
-          ))}
+            <ChatMessage key={message._id} message={message} />
+          ))}{' '}
           {currentStreamId && (
             <StreamingMessage
               streamId={currentStreamId}
-              shouldStream={shouldDriveStream}
+              shouldStream={drivenIds.has(currentStreamId)}
               onTextUpdate={scrollToBottom}
+              onStop={() => {
+                // Remove the stream from driven IDs when it stops
+                removeDrivenId(currentStreamId)
+              }}
             />
           )}
         </div>

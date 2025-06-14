@@ -17,7 +17,7 @@ import {
   SidebarMenuSkeleton,
   SidebarSeparator
 } from '@/components/ui/sidebar'
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { MoreHorizontal, Pin, PinOff, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -34,6 +34,9 @@ interface Chat {
 }
 
 export function NavChats() {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+
   const chats = useQuery(api.chat.getUserChats)
   const togglePin = useMutation(api.chat.toggleChatPin)
   const deleteChat = useMutation(api.chat.deleteChat)
@@ -53,7 +56,12 @@ export function NavChats() {
 
   const handleDeleteChat = async (chatId: Id<'chat'>) => {
     try {
+      if (pathname.includes(chatId)) {
+        await navigate({ to: '/' })
+      }
+
       await deleteChat({ chatId })
+
       toast.success('Chat deleted')
     } catch (error) {
       console.error('Failed to delete chat:', error)
@@ -71,7 +79,7 @@ export function NavChats() {
     const diffTime = now.getTime() - date.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    if (diffDays === 1) return 'Today'
+    if (diffDays === 0 || diffDays === 1) return 'Today'
     if (diffDays === 2) return 'Yesterday'
     if (diffDays <= 7) return `${diffDays} days ago`
     return date.toLocaleDateString()

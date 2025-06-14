@@ -1,4 +1,3 @@
-import fs from 'node:fs'
 import { resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
@@ -16,11 +15,11 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src')
     }
-  },
-  server: {
-    https: {
-      key: fs.readFileSync('./localhost+3-key.pem'),
-      cert: fs.readFileSync('./localhost+3.pem')
-    }
   }
+  // server: {
+  //   https: {
+  //     key: fs.readFileSync('./localhost+3-key.pem'),
+  //     cert: fs.readFileSync('./localhost+3.pem')
+  //   }
+  // }
 })
