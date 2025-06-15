@@ -135,3 +135,25 @@ code {
     @apply bg-background text-foreground;
   }
 }
+
+.button-grid {
+  display: grid;
+  grid-template-areas: "stack";
+}
+
+.button-grid-spinner {
+  visibility: hidden;
+  grid-area: stack;
+}
+
+.button-grid-content {
+  grid-area: stack;
+}
+
+.button-grid-loading .button-grid-spinner {
+  visibility: visible;
+}
+
+.button-grid-loading .button-grid-content {
+  visibility: hidden;
+}

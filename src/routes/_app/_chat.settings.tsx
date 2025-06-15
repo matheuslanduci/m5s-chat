@@ -9,15 +9,17 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { useMutation as useRQMutation } from '@tanstack/react-query'
 import {
   createFileRoute,
   useCanGoBack,
   useRouter
 } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
-import { Moon, Sun } from 'lucide-react'
+import { Loader2, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { api } from '../../../convex/_generated/api'
 
 export const Route = createFileRoute('/_app/_chat/settings')({
   component: RouteComponent
@@ -32,6 +34,18 @@ function RouteComponent() {
   const userPreference = useQuery(api.userPreference.getUserPreference)
   const setUserPreference = useMutation(api.userPreference.setUserPreference)
 
+  const setUserPreferenceMutation = useRQMutation({
+    mutationFn: setUserPreference,
+    onSuccess: () => {
+      toast.success('Settings saved successfully')
+    },
+    onError: (error) => {
+      toast.error('Oops! Something went wrong while saving settings.')
+      console.error('Error saving user preference:', error)
+      setPrompt(userPreference?.generalPrompt || '')
+    }
+  })
+
   function goBack() {
     if (canGoBack) {
       return router.history.back()
@@ -41,7 +55,9 @@ function RouteComponent() {
   }
 
   function savePrompt() {
-    setUserPreference({ generalPrompt: prompt })
+    setUserPreferenceMutation.mutate({
+      generalPrompt: prompt
+    })
   }
 
   useEffect(() => {
@@ -49,6 +65,22 @@ function RouteComponent() {
       setPrompt(userPreference.generalPrompt)
     }
   }, [userPreference])
+
+  if (!userPreference) {
+    return (
+      <Dialog defaultOpen onOpenChange={() => goBack()}>
+        <DialogContent className="!max-w-[660px]">
+          <DialogHeader>
+            <DialogTitle>Settings</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 flex items-center justify-center p-4">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
     <Dialog defaultOpen onOpenChange={() => goBack()}>
@@ -105,8 +137,14 @@ function RouteComponent() {
               value={prompt}
             />
             <div className="flex justify-end">
-              <Button type="submit" variant="outline" size="sm">
-                Save
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className={`button-grid ${setUserPreferenceMutation.isPending ? 'button-grid-loading' : ''}`}
+              >
+                <Loader2 className="animate-spin button-grid-spinner mx-auto" />
+                <span className="button-grid-content">Save</span>
               </Button>
             </div>
           </form>

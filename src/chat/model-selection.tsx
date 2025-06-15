@@ -1,4 +1,3 @@
-import { api } from 'convex/_generated/api'
 import type { Doc, Id } from 'convex/_generated/dataModel'
 import { useMutation, useQuery } from 'convex/react'
 import {
@@ -9,6 +8,7 @@ import {
   useState
 } from 'react'
 import { toast } from 'sonner'
+import { api } from '../../convex/_generated/api'
 
 export type BasicCategory =
   | 'Programming'
@@ -23,6 +23,11 @@ export type BasicCategory =
   | 'Health'
   | 'Trivia'
   | 'Academia'
+
+type CategoryWithModel = {
+  category: BasicCategory
+  model: Doc<'model'> | null
+}
 
 type ModelSelection =
   | {
@@ -39,9 +44,14 @@ type ModelSelection =
     }
 
 type ModelSelectionContext = {
+  displayName: string
+  isFetching: boolean
   selection: ModelSelection
-
+  categoriesWithModels: CategoryWithModel[]
+  models: Doc<'model'>[]
   setAutoMode: () => void
+  setCategoryMode: (category: BasicCategory) => void
+  setModelMode: (modelId: Id<'model'>) => void
 }
 
 export const modelSelectionContext = createContext<ModelSelectionContext>(
@@ -53,9 +63,11 @@ export function ModelSelectionProvider({
 }: { children: React.ReactNode }) {
   const [optimisticSelection, setOptimisticSelection] =
     useState<ModelSelection | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
 
+  const bestModels = useQuery(api.model.getBestModels)
+  const models = useQuery(api.model.getModels)
   const userPreference = useQuery(api.userPreference.getUserPreference)
-
   const setUserPreference = useMutation(api.userPreference.setUserPreference)
 
   const selection = useMemo((): ModelSelection => {
@@ -94,19 +106,40 @@ export function ModelSelectionProvider({
 
   const updateUserPreferences = useCallback(
     async (updates: ModelSelection) => {
+      if (isUpdating) return
+
       setOptimisticSelection(updates)
+      setIsUpdating(true)
 
       try {
+        if (updates.defaultModelSelection === 'model') {
+          // @ts-expect-error can't send defaultModel to the server
+          updates.defaultModel = undefined
+        }
+
         await setUserPreference(updates)
       } catch (error) {
         console.error('Failed to update user preferences:', error)
         toast.error('Failed to update preferences. Please try again later.')
       } finally {
         setOptimisticSelection(null)
+        setIsUpdating(false)
       }
     },
-    [setUserPreference]
+    [setUserPreference, isUpdating]
   )
+
+  const displayName = useMemo(() => {
+    console.log('selection', selection)
+    switch (selection.defaultModelSelection) {
+      case 'auto':
+        return 'Auto'
+      case 'category':
+        return selection.defaultCategory
+      case 'model':
+        return selection.defaultModel?.name || 'Unknown'
+    }
+  }, [selection])
 
   const setAutoMode = useCallback(() => {
     updateUserPreferences({
@@ -114,11 +147,42 @@ export function ModelSelectionProvider({
     })
   }, [updateUserPreferences])
 
+  const setCategoryMode = useCallback(
+    (category: BasicCategory) => {
+      updateUserPreferences({
+        defaultModelSelection: 'category',
+        defaultCategory: category
+      })
+    },
+    [updateUserPreferences]
+  )
+
+  const setModelMode = useCallback(
+    (modelId: Id<'model'>) => {
+      const model = models?.find((m) => m._id === modelId) || null
+
+      updateUserPreferences({
+        defaultModelSelection: 'model',
+        defaultModelId: modelId,
+        defaultModel: model
+      })
+    },
+    [models, updateUserPreferences]
+  )
+
+  const isFetching = !bestModels || !models || !userPreference
+
   return (
     <modelSelectionContext.Provider
       value={{
         selection,
-        setAutoMode
+        setAutoMode,
+        setCategoryMode,
+        setModelMode,
+        displayName,
+        isFetching,
+        categoriesWithModels: bestModels || [],
+        models: models || []
       }}
     >
       {children}

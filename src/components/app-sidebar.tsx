@@ -1,10 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import { MessageCircle } from 'lucide-react'
+import { NavChatHistory } from './nav-chat-history'
 import { NavUser } from './nav-user'
+import { Button } from './ui/button'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -29,7 +32,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>{/* <NavChats /> */}</SidebarContent>
+      <SidebarContent>
+        <SidebarGroup>
+          <Button type="button" asChild>
+            <Link to="/">New Chat</Link>
+          </Button>
+        </SidebarGroup>
+        <NavChatHistory />
+      </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>

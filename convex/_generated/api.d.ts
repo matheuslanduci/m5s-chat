@@ -13,7 +13,10 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as attachment from "../attachment.js";
+import type * as chat from "../chat.js";
 import type * as error from "../error.js";
+import type * as model from "../model.js";
 import type * as userPreference from "../userPreference.js";
 
 /**
@@ -25,7 +28,10 @@ import type * as userPreference from "../userPreference.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  attachment: typeof attachment;
+  chat: typeof chat;
   error: typeof error;
+  model: typeof model;
   userPreference: typeof userPreference;
 }>;
 export declare const api: FilterApi<

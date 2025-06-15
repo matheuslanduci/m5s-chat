@@ -1,6 +1,6 @@
-import { api } from 'convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { createContext, useContext, useEffect, useState } from 'react'
+import { api } from '../../convex/_generated/api'
 
 type Theme = 'dark' | 'light' | 'system'
 

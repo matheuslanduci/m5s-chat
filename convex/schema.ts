@@ -1,3 +1,4 @@
+import { StreamIdValidator } from '@convex-dev/persistent-text-streaming'
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
@@ -41,5 +42,37 @@ export default defineSchema({
     ),
     defaultModelId: v.optional(v.id('model')),
     defaultCategory: v.optional(category)
-  }).index('byUserId', ['userId'])
+  }).index('byUserId', ['userId']),
+  chat: defineTable({
+    ownerId: v.string(),
+    clientId: v.string(),
+    title: v.optional(v.string()),
+    pinned: v.boolean(),
+    contextTokens: v.optional(v.number()),
+    initialPrompt: v.string(),
+    collaborators: v.optional(v.array(v.string())),
+    lastMessageAt: v.optional(v.number())
+  })
+    .index('byOwnerId', ['ownerId'])
+    .index('byClientId', ['clientId']),
+  message: defineTable({
+    chatId: v.id('chat'),
+    role: v.union(v.literal('user'), v.literal('assistant')),
+    userId: v.string(),
+    streamId: v.optional(StreamIdValidator),
+    content: v.string(),
+    modelId: v.optional(v.id('model')),
+    attachments: v.optional(v.array(v.id('attachment')))
+  }).index('byChatId', ['chatId']),
+  attachment: defineTable({
+    userId: v.string(),
+    storageId: v.string(),
+    name: v.string(),
+    format: v.union(v.literal('image'), v.literal('pdf')),
+    url: v.string()
+  }).index('byUserId', ['userId']),
+  bestModel: defineTable({
+    category,
+    modelId: v.id('model')
+  }).index('byCategory', ['category'])
 })
