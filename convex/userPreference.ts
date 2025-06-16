@@ -86,3 +86,13 @@ export const setUserPreference = mutation({
     })
   }
 })
+
+export const _getUserPreferenceByUserId = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query('userPreference')
+      .withIndex('byUserId', (q) => q.eq('userId', args.userId))
+      .unique()
+  }
+})

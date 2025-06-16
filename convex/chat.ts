@@ -2,7 +2,7 @@ import type { StreamId } from '@convex-dev/persistent-text-streaming'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
-import { action, internalMutation, query } from './_generated/server'
+import { action, internalMutation, mutation, query } from './_generated/server'
 import { unauthorized } from './error'
 import { streamingComponent } from './streaming'
 
@@ -32,7 +32,9 @@ export const getChat = query({
       .withIndex('byClientId', (q) => q.eq('clientId', args.chatId))
       .first()
 
-    if (chat?.collaborators?.includes(user.subject) !== true) throw unauthorized
+    if (!chat) return null
+
+    if (!chat.collaborators?.includes(user.subject)) throw unauthorized
 
     return chat
   }
@@ -40,6 +42,7 @@ export const getChat = query({
 
 export const _createChat = internalMutation({
   args: {
+    title: v.optional(v.string()),
     clientId: v.string(),
     initialPrompt: v.string(),
     userId: v.string()
@@ -50,6 +53,7 @@ export const _createChat = internalMutation({
       clientId: args.clientId,
       initialPrompt: args.initialPrompt,
       pinned: false,
+      title: args.title,
       contextTokens: 0,
       collaborators: [args.userId]
     })
@@ -66,30 +70,86 @@ export const createChat = action({
 
     if (!user) throw unauthorized
 
-    const [chatId, model, streamId] = (await Promise.all([
-      ctx.runMutation(internal.chat._createChat, {
-        clientId: args.clientId,
-        initialPrompt: args.initialPrompt,
-        userId: user.subject
-      }),
+    const [model, streamId, title] = (await Promise.all([
       ctx.runAction(internal.model._resolveModel, {
         userId: user.subject,
         prompt: args.initialPrompt
       }),
-      streamingComponent.createStream(ctx)
-    ])) as [Id<'chat'>, Doc<'model'>, StreamId]
+      streamingComponent.createStream(ctx),
+      ctx
+        .runAction(internal.ai._generateTitle, {
+          prompt: args.initialPrompt
+        })
+        .catch(() => 'New Chat' as string)
+    ])) as [Doc<'model'>, StreamId, string]
 
-    await ctx.runMutation(internal.message._createMessage, {
-      chatId: chatId,
-      content: args.initialPrompt,
-      streamId: streamId,
-      userId: user.subject,
-      modelId: model._id
-    })
+    const chatId: Id<'chat'> = await ctx.runMutation(
+      internal.chat._createChat,
+      {
+        title,
+        clientId: args.clientId,
+        initialPrompt: args.initialPrompt,
+        userId: user.subject
+      }
+    )
+
+    const messageId: Id<'message'> = await ctx.runMutation(
+      internal.message._createMessage,
+      {
+        chatId: chatId,
+        content: args.initialPrompt,
+        streamId: streamId,
+        userId: user.subject,
+        modelId: model._id
+      }
+    )
 
     return {
       chatId,
-      streamId
+      streamId,
+      messageId
     }
+  }
+})
+
+export const toggleChatPin = mutation({
+  args: { chatId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const chat = await ctx.db
+      .query('chat')
+      .withIndex('byClientId', (q) => q.eq('clientId', args.chatId))
+      .first()
+
+    if (!chat || !chat.collaborators?.includes(user.subject)) {
+      throw unauthorized
+    }
+
+    return ctx.db.patch(chat._id, {
+      pinned: !chat.pinned
+    })
+  }
+})
+
+export const deleteChat = mutation({
+  args: { chatId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const chat = await ctx.db
+      .query('chat')
+      .withIndex('byClientId', (q) => q.eq('clientId', args.chatId))
+      .first()
+
+    if (!chat || chat.ownerId !== user.subject) {
+      throw unauthorized
+    }
+
+    return ctx.db.delete(chat._id)
   }
 })

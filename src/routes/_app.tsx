@@ -3,7 +3,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_app')({
   component: AppLayout,
-  beforeLoad: ({ context }) => {
+  beforeLoad: async ({ context }) => {
     if (!context.user.isSignedIn) {
       throw redirect({
         to: '/sign-in/$',

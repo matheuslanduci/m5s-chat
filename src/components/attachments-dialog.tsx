@@ -73,11 +73,9 @@ export function AttachmentsDialog({
     const currentAttachment = attachments[selectedIndex]
     onRemoveAttachment(attachmentId)
 
-    // Adjust selected index if needed
     if (attachments.length <= 1) {
       setOpen(false)
     } else if (currentAttachment?._id === attachmentId) {
-      // If we removed the currently selected item, adjust index
       if (selectedIndex >= attachments.length - 1) {
         setSelectedIndex(Math.max(0, selectedIndex - 1))
       }
@@ -114,8 +112,8 @@ export function AttachmentsDialog({
           </TooltipContent>
         </Tooltip>
 
-        <DialogContent className="!max-w-6xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="px-6 pt-6">
+        <DialogContent className="!max-w-6xl w-[95vw] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <DialogTitle className="text-lg font-semibold">
@@ -174,10 +172,10 @@ export function AttachmentsDialog({
             </div>
           </DialogHeader>
 
-          <Separator />
+          <Separator className="flex-shrink-0" />
           {viewMode === 'grid' ? (
-            <div className="p-6 w-full">
-              <ScrollArea className="h-[60vh]">
+            <div className="p-6 w-full flex-1 min-h-0">
+              <ScrollArea className="h-full max-h-[calc(90vh-10rem)]">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {attachments.map((attachment, index) => (
                     <div key={attachment._id} className="group relative">
@@ -234,8 +232,8 @@ export function AttachmentsDialog({
               </ScrollArea>
             </div>
           ) : (
-            <div className="flex flex-col h-[70vh] w-full">
-              <div className="flex items-center justify-between min-w-0 px-1 sm:px-6 pb-3">
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex items-center justify-between min-w-0 px-1 sm:px-6 pb-3 flex-shrink-0">
                 <div className="flex items-center sm:gap-3">
                   <Button
                     variant="ghost"
@@ -287,17 +285,17 @@ export function AttachmentsDialog({
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="flex-shrink-0" />
 
-              <div className="min-w-0 flex-1 flex items-center justify-center p-6">
+              <div className="min-w-0 flex-1 flex items-center justify-center p-6 overflow-hidden">
                 {selectedAttachment ? (
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-full flex items-center justify-center max-h-[calc(70vh-8rem)]">
                     {selectedAttachment.format === 'image' ? (
-                      <div className="relative max-w-full max-h-full">
+                      <div className="relative max-w-full max-h-full flex items-center justify-center">
                         <img
                           src={selectedAttachment.url}
                           alt={selectedAttachment.name}
-                          className="max-w-full max-h-full w-auto h-auto rounded-lg shadow-lg object-contain"
+                          className="max-w-full max-h-[calc(70vh-12rem)] w-auto h-auto rounded-lg shadow-lg object-contain"
                           onError={() => {
                             toast.error('Failed to load image preview')
                           }}

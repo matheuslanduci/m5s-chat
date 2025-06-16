@@ -5,13 +5,17 @@ import { createContext, useCallback, useContext, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 
+type ChatWithMessages = Doc<'chat'> & {
+  messages: Doc<'message'>[]
+}
+
 type ChatContext = {
   actionsEnabled: boolean
   addAttachment: (attachment: Doc<'attachment'>) => void
   removeAttachment: (attachmentId: Id<'attachment'>) => Promise<void>
   clearAttachments: () => Promise<void>
   attachments: Doc<'attachment'>[]
-  chat: Doc<'chat'> | undefined
+  chat: Doc<'chat'> | undefined | null
   disableActions: () => void
   enableActions: () => void
   drivenIds: Set<string>
@@ -21,19 +25,27 @@ type ChatContext = {
   send: () => void
   isStreaming: boolean
   setIsStreaming: (isStreaming: boolean) => void
+  chatId: string | undefined
+  setChatId: (chatId: string | undefined) => void
+  cachedChats: Map<Id<'chat'>, ChatWithMessages>
+  cacheChat: (chat: ChatWithMessages) => void
 }
 
 export const chatContext = createContext<ChatContext>({} as ChatContext)
 
 export function ChatProvider({
   children,
-  chatId
+  chatId: initialChatId
 }: { children: React.ReactNode; chatId?: string }) {
+  const [chatId, setChatId] = useState<string | undefined>(initialChatId)
   const [content, setContent] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [actionsEnabled, setActionsEnabled] = useState(true)
   const [drivenIds, setDrivenIds] = useState<Set<string>>(new Set())
   const [attachments, setAttachments] = useState<Doc<'attachment'>[]>([])
+  const [cachedChats, setCachedChats] = useState<
+    Map<Id<'chat'>, ChatWithMessages>
+  >(new Map<Id<'chat'>, ChatWithMessages>())
 
   const router = useRouter()
 
@@ -118,6 +130,7 @@ export function ChatProvider({
   const send = useCallback(async () => {
     if (!chatId) {
       try {
+        const contentTrimmed = content.trim()
         const clientId = crypto.randomUUID()
 
         await router.navigate({
@@ -125,16 +138,17 @@ export function ChatProvider({
           params: { id: clientId },
           viewTransition: true
         })
+        setContent('')
 
-        const { chatId } = await createChat({
+        const { messageId } = await createChat({
           clientId,
-          initialPrompt: content
+          initialPrompt: contentTrimmed
         })
 
         setDrivenIds((prev) => {
-          prev.add(chatId)
+          prev.add(messageId)
 
-          return new Set(prev)
+          return prev
         })
 
         setIsStreaming(true)
@@ -145,6 +159,13 @@ export function ChatProvider({
       }
     }
   }, [chatId, content, createChat, router])
+
+  const cacheChat = useCallback((chat: ChatWithMessages) => {
+    setCachedChats((prev) => {
+      prev.set(chat._id, chat)
+      return prev
+    })
+  }, [])
 
   return (
     <chatContext.Provider
@@ -163,7 +184,11 @@ export function ChatProvider({
         enhancePrompt,
         send,
         isStreaming,
-        setIsStreaming
+        setIsStreaming,
+        chatId,
+        setChatId,
+        cachedChats,
+        cacheChat
       }}
     >
       {children}

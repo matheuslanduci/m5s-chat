@@ -63,6 +63,45 @@ Please provide an enhanced version and assess its reliability:`
   }
 })
 
+export const _generateTitle = internalAction({
+  args: {
+    prompt: v.string()
+  },
+  handler: async (_, args) => {
+    const openRouter = createOpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY
+    })
+
+    const response = await generateObject({
+      model: openRouter('google/gemini-2.0-flash-lite-001'),
+      messages: [
+        {
+          role: 'system',
+          content: `You are an AI assistant that generates concise and descriptive titles 
+for content given directly by the user. Your task is to create a title that 
+accurately reflects the content provided by the user. The title should be clear,
+informative, and engaging, while avoiding unnecessary complexity or jargon. 
+If the content is not clear, use a generic description for the content, 
+such as "Code Snippet in JavaScript" or "Code Snippet in Python" depending 
+on the language used.`
+        },
+        {
+          role: 'user',
+          content: args.prompt
+        }
+      ],
+      schema: z.object({
+        title: z.string().describe('The generated title for the content')
+      }),
+      output: 'object',
+      maxTokens: 50,
+      temperature: 0.5
+    })
+
+    return response.object.title
+  }
+})
+
 export const _getBestCategory = internalAction({
   args: {
     prompt: v.string()

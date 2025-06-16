@@ -6,9 +6,10 @@ import {
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { streamText } from 'ai'
 import z from 'zod'
-import { components } from './_generated/api'
+import { components, internal } from './_generated/api'
+import type { Id } from './_generated/dataModel'
 import { httpAction, query } from './_generated/server'
-import { unauthorized } from './error'
+import { serverError, unauthorized } from './error'
 
 export const streamingComponent = new PersistentTextStreaming(
   components.persistentTextStreaming
@@ -82,23 +83,102 @@ export const streamChat = httpAction(async (ctx, request) => {
     ctx,
     request,
     streamId as StreamId,
-    async (ctx, req, streamId, append) => {
+    async (ctx, _, streamId, append) => {
       const user = await ctx.auth.getUserIdentity()
 
       if (!user) throw unauthorized
 
-      const message = await ctx.db
-        .query('message')
-        .withIndex('byStreamId', (q) => q.eq('streamId', streamId))
-        .first()
+      const message = await ctx.runQuery(
+        internal.message._getMessageByStreamId,
+        {
+          streamId: streamId
+        }
+      )
+
+      if (!message) throw serverError
 
       const openRouter = createOpenRouter({
-        apiKey: process.env.OPENROUTER_API_KEY,
+        apiKey: process.env.OPENROUTER_API_KEY
       })
 
-      const stream = await streamText({
-        model:
+      const model = await ctx.runQuery(internal.model._getModelById, {
+        modelId: message?.modelId ?? ('unknown' as Id<'model'>)
       })
+
+      if (!model) throw serverError
+
+      const messages = await ctx.runQuery(
+        internal.message._getMessagesByChatId,
+        {
+          chatId: message.chatId
+        }
+      )
+
+      const messageHistory: Array<{
+        role: 'user' | 'assistant' | 'system'
+        content: string
+      }> = []
+
+      const userPreference = await ctx.runQuery(
+        internal.userPreference._getUserPreferenceByUserId,
+        {
+          userId: user.subject
+        }
+      )
+
+      messageHistory.push({
+        role: 'system',
+        content: `You are a helpful assistant. You are the model ${model.name}
+provided by ${model.provider}. Please answer's the user's questions in a markdown
+format.`
+      })
+
+      if (userPreference?.generalPrompt) {
+        messageHistory.push({
+          role: 'system',
+          content: userPreference.generalPrompt
+        })
+      }
+
+      for (const msg of messages) {
+        if (msg.content) {
+          messageHistory.push({
+            role: 'user',
+            content: msg.content
+          })
+        }
+
+        if (msg.responses && msg.responses.length > 0) {
+          const lastResponse = msg.responses[msg.responses.length - 1]
+
+          messageHistory.push({
+            role: 'assistant',
+            content: lastResponse?.content || ''
+          })
+        }
+      }
+
+      const stream = streamText({
+        messages: messageHistory,
+        model: openRouter(model.key),
+        temperature: 0.7,
+        onFinish: async (response) => {
+          await ctx.runMutation(internal.message._addResponseToMessage, {
+            messageId: message._id,
+            response: {
+              content: response.text,
+              modelId: message.modelId,
+              provider: model.provider,
+              tokens: response.usage.completionTokens,
+              createdAt: Date.now()
+            }
+          })
+        }
+      })
+
+      for await (const textPart of stream.textStream) {
+        await append(textPart)
+      }
     }
   )
 

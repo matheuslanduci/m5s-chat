@@ -47,7 +47,7 @@ export function ChatBox() {
 
   return (
     <div className="p-4 w-full">
-      <div className="max-w-4xl mx-auto relative">
+      <div className="max-w-3xl mx-auto relative pointer-events-auto">
         <AnimatePresence>
           {attachments.length > 0 && (
             <motion.div
@@ -57,7 +57,7 @@ export function ChatBox() {
                 y: 60,
                 opacity: 0
               }}
-              className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background p-2 pb-16"
+              className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background/75 backdrop-blur-lg p-2 pb-16"
             >
               {visibleAttachments.map((attachment) => (
                 <AttachmentPreview
@@ -99,7 +99,7 @@ export function ChatBox() {
           )}
         </AnimatePresence>
 
-        <div className="border rounded-2xl bg-background p-2 z-10 relative">
+        <div className="border rounded-2xl bg-background/75 backdrop-blur-lg p-2 z-10 relative">
           <div className="mb-2">
             <Textarea
               ref={textareaRef}
@@ -108,6 +108,7 @@ export function ChatBox() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
+                  send()
                 }
               }}
               placeholder="Type your message..."
