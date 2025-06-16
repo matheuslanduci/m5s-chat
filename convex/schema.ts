@@ -57,13 +57,30 @@ export default defineSchema({
     .index('byClientId', ['clientId']),
   message: defineTable({
     chatId: v.id('chat'),
-    role: v.union(v.literal('user'), v.literal('assistant')),
     userId: v.string(),
     streamId: v.optional(StreamIdValidator),
     content: v.string(),
     modelId: v.optional(v.id('model')),
+    responses: v.optional(
+      v.array(
+        v.object({
+          content: v.string(),
+          modelId: v.optional(v.id('model')),
+          provider: v.union(
+            v.literal('openai'),
+            v.literal('anthropic'),
+            v.literal('google'),
+            v.literal('deepseek')
+          ),
+          tokens: v.number(),
+          createdAt: v.number()
+        })
+      )
+    ),
     attachments: v.optional(v.array(v.id('attachment')))
-  }).index('byChatId', ['chatId']),
+  })
+    .index('byChatId', ['chatId'])
+    .index('byStreamId', ['streamId']),
   attachment: defineTable({
     userId: v.string(),
     storageId: v.string(),

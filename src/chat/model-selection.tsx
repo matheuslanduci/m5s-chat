@@ -112,12 +112,14 @@ export function ModelSelectionProvider({
       setIsUpdating(true)
 
       try {
-        if (updates.defaultModelSelection === 'model') {
+        const serverUpdates = { ...updates }
+
+        if (serverUpdates.defaultModelSelection === 'model') {
           // @ts-expect-error can't send defaultModel to the server
-          updates.defaultModel = undefined
+          serverUpdates.defaultModel = undefined
         }
 
-        await setUserPreference(updates)
+        await setUserPreference(serverUpdates)
       } catch (error) {
         console.error('Failed to update user preferences:', error)
         toast.error('Failed to update preferences. Please try again later.')
@@ -130,7 +132,6 @@ export function ModelSelectionProvider({
   )
 
   const displayName = useMemo(() => {
-    console.log('selection', selection)
     switch (selection.defaultModelSelection) {
       case 'auto':
         return 'Auto'

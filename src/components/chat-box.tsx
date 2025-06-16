@@ -1,8 +1,8 @@
 import { useChat } from '@/chat/chat'
 import { useResponsiveAttachmentLimit } from '@/hooks/use-responsive-attachment-limit'
-import { X } from 'lucide-react'
+import { ArrowUp, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { AttachmentPreview } from './attachment-preview'
 import { AttachmentsDialog } from './attachments-dialog'
 import { FileUpload } from './file-upload'
@@ -12,8 +12,16 @@ import { Textarea } from './ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export function ChatBox() {
-  const { attachments, actionsEnabled, clearAttachments, removeAttachment } =
-    useChat()
+  const {
+    attachments,
+    content,
+    setContent,
+    actionsEnabled,
+    clearAttachments,
+    enhancePrompt,
+    removeAttachment,
+    send
+  } = useChat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const attachmentLimit = useResponsiveAttachmentLimit()
 
@@ -32,6 +40,10 @@ export function ChatBox() {
       textareaRef.current?.focus()
     }, 1)
   }
+
+  useEffect(() => {
+    textareaRef.current?.focus()
+  }, [])
 
   return (
     <div className="p-4 w-full">
@@ -91,9 +103,13 @@ export function ChatBox() {
           <div className="mb-2">
             <Textarea
               ref={textareaRef}
-              // value={inputValue}
-              // onChange={(e) => setInputValue(e.target.value)}
-              // onKeyDown={handleKeyPress}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                }
+              }}
               placeholder="Type your message..."
               disabled={!actionsEnabled}
               className="border-0 px-2 shadow-none focus-visible:ring-0 min-h-12 max-h-32 resize-none !bg-transparent"
@@ -120,34 +136,39 @@ export function ChatBox() {
             <div className="flex-1" />
 
             <div className="flex items-center gap-1">
-              {/* <Tooltip>
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     onClick={enhancePrompt}
                     variant="ghost"
                     size="icon"
                     className="shrink-0 size-7 mr-2"
-                    disabled={!inputValue.trim() || isLoading}
+                    disabled={
+                      !actionsEnabled ||
+                      !content.trim() ||
+                      attachments.length > 0
+                    }
                   >
                     <Sparkles className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {inputValue.trim()
+                    {content.trim()
                       ? 'Enhance prompt with AI'
                       : 'Enter text to enhance'}
                   </p>
                 </TooltipContent>
-              </Tooltip> */}
+              </Tooltip>
 
-              {/* <Tooltip>
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     onClick={send}
                     disabled={
-                      (!inputValue.trim() && attachments.length === 0) ||
-                      isLoading
+                      actionsEnabled &&
+                      !content.trim() &&
+                      attachments.length === 0
                     }
                     size="icon"
                     className="size-7 border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10"
@@ -158,7 +179,7 @@ export function ChatBox() {
                 <TooltipContent>
                   <p>Send message</p>
                 </TooltipContent>
-              </Tooltip> */}
+              </Tooltip>
             </div>
           </div>
         </div>

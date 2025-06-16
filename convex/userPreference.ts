@@ -1,7 +1,17 @@
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
+import { internalQuery, mutation, query } from './_generated/server'
 import { serverError, unauthorized } from './error'
 import { category } from './schema'
+
+export const _getUserPreference = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query('userPreference')
+      .withIndex('byUserId', (q) => q.eq('userId', args.userId))
+      .unique()
+  }
+})
 
 export const getUserPreference = query({
   handler: async (ctx) => {
