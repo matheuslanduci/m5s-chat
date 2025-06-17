@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { useMutation } from '@tanstack/react-query'
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { Loader2, LogOut, MoreVertical, Settings, User } from 'lucide-react'
 import { toast } from 'sonner'
 import { UserAvatar } from './user-avatar'
@@ -23,7 +23,6 @@ import { UserAvatar } from './user-avatar'
 export function NavUser() {
   const { isMobile } = useSidebar()
   const { user } = useUser()
-  const location = useLocation()
   const { signOut } = useAuth()
   const signOutMutate = useMutation({
     mutationFn: () => signOut(),

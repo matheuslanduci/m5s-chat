@@ -24,10 +24,7 @@ export function ChatBox() {
     isStreaming,
     isEditing,
     setIsEditing,
-    textareaRef,
-    summarizeChat,
-    summary,
-    chat
+    textareaRef
   } = useChat()
 
   const attachmentLimit = useResponsiveAttachmentLimit()
