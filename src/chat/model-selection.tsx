@@ -170,8 +170,10 @@ export function ModelSelectionProvider({
     },
     [models, updateUserPreferences]
   )
-
-  const isFetching = !bestModels || !models || !userPreference
+  const isFetching =
+    bestModels === undefined ||
+    models === undefined ||
+    userPreference === undefined
 
   return (
     <modelSelectionContext.Provider
