@@ -51,6 +51,7 @@ export function ChatProvider({
   const [chatId, setChatId] = useState<string | undefined>(initialChatId)
   const [content, setContent] = useState('')
   const [previousContent, setPreviousContent] = useState('')
+  const [isSending, setIsSending] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [actionsEnabled, setActionsEnabled] = useState(true)
   const [drivenIds, setDrivenIds] = useState<Set<string>>(new Set())
@@ -160,7 +161,9 @@ export function ChatProvider({
   }, [])
 
   const send = useCallback(async () => {
-    if (isStreaming) return
+    if (isSending || isStreaming) return
+
+    setIsSending(true)
 
     if (isEditing && editingMessageId) {
       try {
@@ -177,6 +180,7 @@ export function ChatProvider({
         setEditingMessageId(null)
       }
 
+      setIsSending(false)
       setContent('')
       return
     }
@@ -215,6 +219,8 @@ export function ChatProvider({
         console.error('Failed to create chat:', error)
         toast.error('Failed to create chat. Please try again.')
         return
+      } finally {
+        setIsSending(false)
       }
 
       return
@@ -247,6 +253,8 @@ export function ChatProvider({
       console.error('Failed to send message:', error)
       toast.error('Failed to send message. Please try again.')
       return
+    } finally {
+      setIsSending(false)
     }
   }, [
     chatId,
@@ -259,7 +267,8 @@ export function ChatProvider({
     editingMessageId,
     editAndRetryMessageAction,
     attachments,
-    scrollToBottom
+    scrollToBottom,
+    isSending
   ])
 
   const retryMessage = useCallback(
