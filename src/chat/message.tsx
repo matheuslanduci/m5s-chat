@@ -3,8 +3,10 @@ import { createContext, useContext, useState } from 'react'
 
 type MessageContext = {
   message: Doc<'message'>
-  selectedIndex: number
-  setSelectedIndex: (index: number) => void
+  selectedReplyIndex: number
+  setSelectedReplyIndex: (index: number) => void
+  selectedMessageIndex: number
+  setSelectedMessageIndex: (index: number) => void
 }
 
 export const messageContext = createContext<MessageContext>(
@@ -18,16 +20,21 @@ export function MessageProvider({
   children: React.ReactNode
   message: Doc<'message'>
 }) {
-  const [selectedIndex, setSelectedIndex] = useState<number>(
+  const [selectedReplyIndex, setSelectedReplyIndex] = useState<number>(
     message.responses?.length ? message.responses.length - 1 : 0
+  )
+  const [selectedMessageIndex, setSelectedMessageIndex] = useState<number>(
+    message.contentHistory?.length ? message.contentHistory.length - 1 : 0
   )
 
   return (
     <messageContext.Provider
       value={{
         message,
-        selectedIndex,
-        setSelectedIndex
+        selectedReplyIndex,
+        setSelectedReplyIndex,
+        selectedMessageIndex,
+        setSelectedMessageIndex
       }}
     >
       {children}

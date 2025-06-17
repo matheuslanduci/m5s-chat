@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
-import { mutation } from './_generated/server'
+import type { Doc } from './_generated/dataModel'
+import { internalQuery, mutation, query } from './_generated/server'
 import { unauthorized } from './error'
 
 export const generateUploadUrl = mutation({
@@ -56,5 +57,52 @@ export const deleteAttachment = mutation({
     await ctx.db.delete(args.attachmentId)
 
     return true
+  }
+})
+
+export const _getAttachmentById = internalQuery({
+  args: { attachmentId: v.id('attachment') },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.attachmentId)
+  }
+})
+
+export const _getAttachmentsByIds = internalQuery({
+  args: { attachmentIds: v.array(v.id('attachment')) },
+  handler: async (ctx, args) => {
+    const attachments: Doc<'attachment'>[] = []
+
+    for (const attachmentId of args.attachmentIds) {
+      const attachment = await ctx.db.get(attachmentId)
+
+      if (attachment) {
+        attachments.push(attachment)
+      }
+    }
+
+    return attachments
+  }
+})
+
+export const getAttachments = query({
+  args: {
+    attachmentIds: v.array(v.id('attachment'))
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const attachments: Doc<'attachment'>[] = []
+
+    for (const attachmentId of args.attachmentIds) {
+      const attachment = await ctx.db.get(attachmentId)
+
+      if (attachment && attachment.userId === user.subject) {
+        attachments.push(attachment)
+      }
+    }
+
+    return attachments
   }
 })

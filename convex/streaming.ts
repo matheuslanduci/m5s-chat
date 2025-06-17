@@ -92,17 +92,11 @@ export const streamChat = httpAction(async (ctx, request) => {
     })
   }
 
-  console.log('Streaming chat for message:', message.streamId)
-
   const response = await streamingComponent.stream(
     ctx,
     request,
     message.streamId as StreamId,
     async (ctx, _req, _streamId, append) => {
-      const openRouter = createOpenRouter({
-        apiKey: process.env.OPENROUTER_API_KEY
-      })
-
       const model = await ctx.runQuery(internal.model._getModelById, {
         modelId: message?.modelId ?? ('unknown' as Id<'model'>)
       })
@@ -116,10 +110,32 @@ export const streamChat = httpAction(async (ctx, request) => {
         }
       )
 
-      const messageHistory: Array<{
-        role: 'user' | 'assistant' | 'system'
-        content: string
-      }> = []
+      const messageHistory: Array<
+        | {
+            role: 'system' | 'assistant'
+            content: string
+          }
+        | {
+            role: 'user'
+            content:
+              | string
+              | Array<
+                  | {
+                      type: 'text'
+                      text: string
+                    }
+                  | {
+                      type: 'image'
+                      image: URL
+                    }
+                  | {
+                      type: 'file'
+                      data: URL
+                      mimeType: string
+                    }
+                >
+          }
+      > = []
 
       const userPreference = await ctx.runQuery(
         internal.userPreference._getUserPreferenceByUserId,
@@ -142,37 +158,86 @@ format.`
         })
       }
 
-      console.log('messages:', messages)
-
       const filteredMessages = messages.filter(
         (msg) => msg._creationTime <= message._creationTime
       )
 
-      console.log('Filtered messages:', filteredMessages)
-
       for (const msg of filteredMessages) {
-        if (msg.content) {
+        if (msg.attachments?.length) {
+          if (!model.supportImage && !model.supportPDF) {
+            continue
+          }
+
+          const attachments = await ctx.runQuery(
+            internal.attachment._getAttachmentsByIds,
+            {
+              attachmentIds: msg.attachments
+            }
+          )
+
+          if (
+            attachments.some((attachment) => {
+              if (attachment.format === 'image' && !model.supportImage)
+                return true
+              if (attachment.format === 'pdf' && !model.supportPDF) return true
+              return false
+            })
+          ) {
+            continue
+          }
+
           messageHistory.push({
             role: 'user',
-            content: msg.content
+            content: [
+              {
+                type: 'text',
+                text: msg.content || 'Attached'
+              },
+              ...attachments.map((attachment) => {
+                if (attachment.format === 'image') {
+                  return {
+                    type: 'image' as const,
+                    image: new URL(attachment.url)
+                  }
+                }
+
+                return {
+                  type: 'file' as const,
+                  data: new URL(attachment.url),
+                  mimeType: attachment.format === 'pdf' ? 'application/pdf' : ''
+                }
+              })
+            ]
           })
+
+          continue
         }
+
+        messageHistory.push({
+          role: 'user',
+          content: msg.content
+        })
 
         if (
           msg.responses &&
           msg.responses.length > 0 &&
           msg._id !== message._id
         ) {
-          const lastResponse = msg.responses[msg.responses.length - 1]
+          const response =
+            msg.responses[msg.selectedResponseIndex || msg.responses.length - 1]
 
           messageHistory.push({
             role: 'assistant',
-            content: lastResponse?.content || ''
+            content: response?.content || ''
           })
         }
       }
 
-      console.log('Message history:', messageHistory)
+      const openRouter = createOpenRouter({
+        apiKey: userPreference?.byokEnabled
+          ? userPreference.byokKey || ''
+          : process.env.OPENROUTER_API_KEY
+      })
 
       const stream = streamText({
         messages: messageHistory,

@@ -20,7 +20,8 @@ export const _createMessage = internalMutation({
     content: v.string(),
     streamId: StreamIdValidator,
     userId: v.string(),
-    modelId: v.optional(v.id('model'))
+    modelId: v.optional(v.id('model')),
+    attachments: v.optional(v.array(v.id('attachment')))
   },
   handler: async (ctx, args) => {
     return ctx.db.insert('message', {
@@ -28,7 +29,14 @@ export const _createMessage = internalMutation({
       content: args.content,
       streamId: args.streamId,
       userId: args.userId,
-      modelId: args.modelId
+      modelId: args.modelId,
+      attachments: args.attachments,
+      contentHistory: [
+        {
+          content: args.content,
+          createdAt: Date.now()
+        }
+      ]
     })
   }
 })
@@ -112,7 +120,8 @@ export const _addResponseToMessage = internalMutation({
 export const createMessage = action({
   args: {
     chatId: v.string(),
-    content: v.string()
+    content: v.string(),
+    attachments: v.optional(v.array(v.id('attachment')))
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
@@ -142,7 +151,8 @@ export const createMessage = action({
         content: args.content,
         streamId: streamId,
         userId: user.subject,
-        modelId: model._id
+        modelId: model._id,
+        attachments: args.attachments
       }
     )
 
@@ -150,6 +160,55 @@ export const createMessage = action({
       messageId,
       streamId
     }
+  }
+})
+
+export const editAndRetryMessage = action({
+  args: {
+    messageId: v.id('message'),
+    content: v.string()
+  },
+  handler: async (ctx, args): Promise<Id<'message'>> => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const message: Doc<'message'> | null = await ctx.runQuery(
+      internal.message._getMessageById,
+      {
+        messageId: args.messageId
+      }
+    )
+
+    if (!message) throw notFoundError
+
+    const chat: Doc<'chat'> | null = await ctx.runQuery(
+      internal.chat._getChatById,
+      {
+        chatId: message.chatId
+      }
+    )
+
+    if (!chat) throw notFoundError
+
+    if (!chat.collaborators?.includes(user.subject)) throw unauthorized
+
+    const [model, streamId] = (await Promise.all([
+      ctx.runAction(internal.model._resolveModel, {
+        userId: user.subject,
+        prompt: args.content
+      }),
+      streamingComponent.createStream(ctx)
+    ])) as [Doc<'model'>, StreamId]
+
+    await ctx.runMutation(internal.message._editMessage, {
+      messageId: message._id,
+      content: args.content,
+      streamId,
+      modelId: model._id
+    })
+
+    return message._id
   }
 })
 
@@ -193,8 +252,6 @@ export const retryMessage = action({
       streamingComponent.createStream(ctx)
     ])) as [Doc<'model'>, StreamId]
 
-    console.log('new streamId', streamId)
-
     await ctx.runMutation(internal.message._editMessageStreamId, {
       messageId: message._id,
       streamId,
@@ -225,6 +282,33 @@ export const _editMessageStreamId = internalMutation({
     return ctx.db.patch(args.messageId, {
       streamId: args.streamId,
       modelId: args.modelId
+    })
+  }
+})
+
+export const _editMessage = internalMutation({
+  args: {
+    messageId: v.id('message'),
+    streamId: StreamIdValidator,
+    modelId: v.optional(v.id('model')),
+    content: v.string()
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId)
+
+    if (!message) throw notFoundError
+
+    return ctx.db.patch(args.messageId, {
+      content: args.content,
+      streamId: args.streamId,
+      modelId: args.modelId,
+      contentHistory: [
+        ...(message.contentHistory || []),
+        {
+          content: args.content,
+          createdAt: Date.now()
+        }
+      ]
     })
   }
 })

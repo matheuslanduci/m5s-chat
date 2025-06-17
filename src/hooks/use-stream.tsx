@@ -2,9 +2,10 @@ import { env } from '@/lib/env'
 import { useAuth } from '@clerk/clerk-react'
 import type { Id } from 'convex/_generated/dataModel'
 import { useQuery } from 'convex/react'
-// WTF is this import? is for types though, it's ok
+// WTF is this import? its for types though
 import type { StreamStatus } from 'node_modules/@convex-dev/persistent-text-streaming/dist/esm/component/schema'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 
 type UseStreamProps = {
@@ -22,7 +23,9 @@ export type StreamBody = {
 export function useStream({ isDriven, messageId }: UseStreamProps) {
   const { getToken } = useAuth()
   const [streamEnded, setStreamEnded] = useState<boolean | null>(null)
-  const [streamBody, setStreamBody] = useState<string>('')
+
+  const userPreference = useQuery(api.userPreference.getUserPreference)
+
   const streamStarted = useRef(false)
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needed.
@@ -39,9 +42,12 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
     usePersistence && messageId ? { messageId } : 'skip'
   )
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Needed.>
+  const [streamBody, setStreamBody] = useState<string>('')
+
   useEffect(() => {
     if (isDriven && messageId && !streamStarted.current) {
+      streamStarted.current = true
+
       void (async () => {
         const token = await getToken({
           template: 'convex'
@@ -65,12 +71,8 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
 
         setStreamEnded(success)
       })()
-
-      return () => {
-        streamStarted.current = true
-      }
     }
-  }, [isDriven, messageId, setStreamEnded, streamStarted, getToken])
+  }, [isDriven, messageId, getToken])
 
   const body = useMemo<StreamBody>(() => {
     if (persistentBody) return persistentBody
@@ -81,13 +83,19 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
       status = streamBody.length > 0 ? 'streaming' : 'pending'
     } else {
       status = streamEnded ? 'done' : 'error'
+
+      if (streamBody.length === 0 && userPreference?.byokEnabled) {
+        toast.error(
+          'Your BYOK key is invalid or not set. Please check your settings.'
+        )
+      }
     }
 
     return {
       text: streamBody,
       status: status as StreamStatus
     }
-  }, [persistentBody, streamBody, streamEnded])
+  }, [persistentBody, streamBody, streamEnded, userPreference?.byokEnabled])
 
   return body
 }
@@ -105,8 +113,10 @@ async function startStreaming(
     }),
     headers: { 'Content-Type': 'application/json', ...headers }
   })
+  console.log('Streaming response', response)
 
   if (response.status === 205) {
+    toast.error('Please refresh the page and try again.')
     console.error('Stream already finished', response)
     return false
   }

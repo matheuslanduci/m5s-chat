@@ -2,6 +2,8 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { generateObject } from 'ai'
 import { v } from 'convex/values'
 import { z } from 'zod'
+import { internal } from './_generated/api'
+import type { Doc } from './_generated/dataModel'
 import { action, internalAction } from './_generated/server'
 import { unauthorized } from './error'
 
@@ -141,5 +143,50 @@ export const _getBestCategory = internalAction({
     return response.object.category === 'Other'
       ? 'Trivia'
       : response.object.category
+  }
+})
+
+export const summarizeChat = action({
+  args: {
+    chatId: v.id('chat')
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const chat = await ctx.runQuery(internal.chat._getChatById, {
+      chatId: args.chatId
+    })
+
+    if (!chat || chat.ownerId !== user.subject) {
+      throw new Error('Chat not found or access denied')
+    }
+
+    const messages: Doc<'message'>[] = await ctx.runQuery(
+      internal.message._getMessagesByChatId,
+      {
+        chatId: args.chatId
+      }
+    )
+
+    const openRouter = createOpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY
+    })
+
+    const response = await generateObject({
+      model: openRouter('google/gemini-2.0-flash-lite-001'),
+      messages: messages.map((msg) => ({
+        role: msg.userId === user.subject ? 'user' : 'assistant',
+        content: msg.content
+      })),
+      schema: z.object({
+        summary: z.string().describe('The summary of the chat')
+      }),
+      maxTokens: 500,
+      temperature: 0.7
+    })
+
+    return response.object.summary
   }
 })

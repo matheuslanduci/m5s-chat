@@ -41,7 +41,9 @@ export default defineSchema({
       v.union(v.literal('auto'), v.literal('category'), v.literal('model'))
     ),
     defaultModelId: v.optional(v.id('model')),
-    defaultCategory: v.optional(category)
+    defaultCategory: v.optional(category),
+    byokEnabled: v.optional(v.boolean()),
+    byokKey: v.optional(v.string())
   }).index('byUserId', ['userId']),
   chat: defineTable({
     ownerId: v.string(),
@@ -62,7 +64,16 @@ export default defineSchema({
     userId: v.string(),
     streamId: v.optional(StreamIdValidator),
     content: v.string(),
+    contentHistory: v.optional(
+      v.array(
+        v.object({
+          content: v.string(),
+          createdAt: v.number()
+        })
+      )
+    ),
     modelId: v.optional(v.id('model')),
+    selectedResponseIndex: v.optional(v.number()),
     responses: v.optional(
       v.array(
         v.object({

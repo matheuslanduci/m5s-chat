@@ -2,16 +2,13 @@ import { useChat } from '@/chat/chat'
 import { MessageProvider } from '@/chat/message'
 import type { Id } from 'convex/_generated/dataModel'
 import { useQuery } from 'convex/react'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { api } from '../../convex/_generated/api'
-import { ChatMessage } from './chat-message'
 import { ChatReplies } from './chat-replies'
-import { MarkdownContent } from './markdown-content'
+import { ChatRequests } from './chat-requests'
 
 export function ChatMessages() {
-  const { chat, cachedChats, cacheChat } = useChat()
-
-  const messageContainerEndRef = useRef<HTMLDivElement>(null)
+  const { chat, cachedChats, cacheChat, scrollToBottom } = useChat()
 
   const messagesToFetch = useQuery(
     api.message.getMessagesByChatId,
@@ -34,19 +31,22 @@ export function ChatMessages() {
     }
   }, [chat, messagesToFetch, cacheChat])
 
+  // Auto-scroll when messages are loaded or updated
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => scrollToBottom(false), 100)
+    }
+  }, [messages.length, scrollToBottom])
+
   return (
     <div className="flex-1 flex flex-col min-h-0 px-6 lg:px-0">
       <div className="w-full max-w-3xl mx-auto relative py-4">
         {messages?.map((message) => (
           <MessageProvider key={message._id} message={message}>
-            <ChatMessage author="user" creationTime={message._creationTime}>
-              <MarkdownContent>{message.content}</MarkdownContent>
-            </ChatMessage>
-            <ChatReplies message={message} />
+            <ChatRequests />
+            <ChatReplies />
           </MessageProvider>
         ))}
-
-        <div ref={messageContainerEndRef} />
       </div>
     </div>
   )

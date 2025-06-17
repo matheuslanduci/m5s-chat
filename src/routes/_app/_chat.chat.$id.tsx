@@ -3,7 +3,7 @@ import { ChatBox } from '@/components/chat-box'
 import { ChatHeader } from '@/components/chat-header'
 import { ChatMessages } from '@/components/chat-messages'
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 export const Route = createFileRoute('/_app/_chat/chat/$id')({
   component: RouteComponent
@@ -11,13 +11,27 @@ export const Route = createFileRoute('/_app/_chat/chat/$id')({
 
 function RouteComponent() {
   const { id } = Route.useParams()
-  const { setChatId } = useChat()
+  const { setChatId, wrapperRef } = useChat()
+
+  const scrollToBottom = useCallback(
+    (smooth = false) => {
+      if (wrapperRef.current) {
+        wrapperRef.current.scroll({
+          top: wrapperRef.current.scrollHeight,
+          behavior: smooth ? 'smooth' : 'auto'
+        })
+      }
+    },
+    [wrapperRef]
+  )
 
   useEffect(() => {
     if (id) {
       setChatId(id)
+      // Scroll to bottom when switching chats
+      setTimeout(() => scrollToBottom(false), 100)
     }
-  }, [id, setChatId])
+  }, [id, setChatId, scrollToBottom])
 
   return (
     <>
@@ -42,6 +56,7 @@ function RouteComponent() {
                     paddingBottom: 160,
                     scrollbarGutter: 'stable both-edges'
                   }}
+                  ref={wrapperRef}
                 >
                   <ChatMessages />
                 </div>

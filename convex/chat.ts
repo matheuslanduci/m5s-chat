@@ -69,7 +69,8 @@ export const _createChat = internalMutation({
 export const createChat = action({
   args: {
     clientId: v.string(),
-    initialPrompt: v.string()
+    initialPrompt: v.string(),
+    attachments: v.optional(v.array(v.id('attachment')))
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
@@ -106,7 +107,8 @@ export const createChat = action({
         content: args.initialPrompt,
         streamId: streamId,
         userId: user.subject,
-        modelId: model._id
+        modelId: model._id,
+        attachments: args.attachments
       }
     )
 

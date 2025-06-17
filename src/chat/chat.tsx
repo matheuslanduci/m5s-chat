@@ -1,7 +1,7 @@
 import { useRouter } from '@tanstack/react-router'
 import type { Doc, Id } from 'convex/_generated/dataModel'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 
@@ -19,6 +19,7 @@ type ChatContext = {
   disableActions: () => void
   enableActions: () => void
   drivenIds: Set<string>
+  setDrivenIds: React.Dispatch<React.SetStateAction<Set<string>>>
   enhancePrompt: () => void
   content: string
   setContent: (content: string) => void
@@ -31,6 +32,14 @@ type ChatContext = {
   cacheChat: (chat: ChatWithMessages) => void
   retryMessage: (messageId: Id<'message'>) => Promise<void>
   createChatBranch: (messageId: Id<'message'>) => Promise<void>
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
+  wrapperRef: React.RefObject<HTMLDivElement | null>
+  scrollToBottom: (smooth?: boolean) => void
+  isEditing: boolean
+  setIsEditing: (editing: boolean, message: Doc<'message'> | null) => void
+  editingMessageId: Id<'message'> | null
+  summarizeChat: (chatId: Id<'chat'>) => void
+  summary: string | null
 }
 
 export const chatContext = createContext<ChatContext>({} as ChatContext)
@@ -41,6 +50,7 @@ export function ChatProvider({
 }: { children: React.ReactNode; chatId?: string }) {
   const [chatId, setChatId] = useState<string | undefined>(initialChatId)
   const [content, setContent] = useState('')
+  const [previousContent, setPreviousContent] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [actionsEnabled, setActionsEnabled] = useState(true)
   const [drivenIds, setDrivenIds] = useState<Set<string>>(new Set())
@@ -48,6 +58,12 @@ export function ChatProvider({
   const [cachedChats, setCachedChats] = useState<
     Map<Id<'chat'>, ChatWithMessages>
   >(new Map<Id<'chat'>, ChatWithMessages>())
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingMessageId, setEditingMessageId] =
+    useState<Id<'message'> | null>(null)
+  const [summary, setSummary] = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   const router = useRouter()
 
@@ -58,6 +74,8 @@ export function ChatProvider({
   const retryMessageAction = useAction(api.message.retryMessage)
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
   const enhancePromptAction = useAction(api.ai.enhancePrompt)
+  const editAndRetryMessageAction = useAction(api.message.editAndRetryMessage)
+  const summarizeChatAction = useAction(api.ai.summarizeChat)
 
   const addAttachment = useCallback((attachment: Doc<'attachment'>) => {
     setAttachments((prev) => [...prev, attachment])
@@ -132,24 +150,55 @@ export function ChatProvider({
     }
   }, [content, disableActions, enableActions, enhancePromptAction])
 
+  const scrollToBottom = useCallback((smooth = false) => {
+    if (wrapperRef.current) {
+      wrapperRef.current.scroll({
+        top: wrapperRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      })
+    }
+  }, [])
+
   const send = useCallback(async () => {
     if (isStreaming) return
+
+    if (isEditing && editingMessageId) {
+      try {
+        await editAndRetryMessageAction({
+          messageId: editingMessageId,
+          content
+        })
+      } catch (error) {
+        console.error('Failed to edit message:', error)
+        toast.error('Failed to edit message. Please try again.')
+        return
+      } finally {
+        setIsEditing(false)
+        setEditingMessageId(null)
+      }
+
+      setContent('')
+      return
+    }
 
     if (!chatId) {
       try {
         const contentTrimmed = content.trim()
         const clientId = crypto.randomUUID()
+        const attachmentIds = attachments.map((attachment) => attachment._id)
 
         await router.navigate({
           to: '/chat/$id',
           params: { id: clientId },
           viewTransition: true
         })
+        setAttachments([])
         setContent('')
 
         const { messageId } = await createChat({
           clientId,
-          initialPrompt: contentTrimmed
+          initialPrompt: contentTrimmed,
+          attachments: attachmentIds
         })
 
         setDrivenIds((prev) => {
@@ -159,6 +208,9 @@ export function ChatProvider({
         })
 
         setIsStreaming(true)
+
+        // Scroll to bottom after sending message
+        setTimeout(() => scrollToBottom(true), 100)
       } catch (error) {
         console.error('Failed to create chat:', error)
         toast.error('Failed to create chat. Please try again.')
@@ -170,12 +222,15 @@ export function ChatProvider({
 
     try {
       const contentTrimmed = content.trim()
+      const attachmentIds = attachments.map((attachment) => attachment._id)
 
       setContent('')
+      setAttachments([])
 
       const { messageId } = await createMessage({
         chatId,
-        content: contentTrimmed
+        content: contentTrimmed,
+        attachments: attachmentIds
       })
 
       setDrivenIds((prev) => {
@@ -185,12 +240,27 @@ export function ChatProvider({
       })
 
       setIsStreaming(true)
+
+      // Scroll to bottom after sending message
+      setTimeout(() => scrollToBottom(true), 100)
     } catch (error) {
       console.error('Failed to send message:', error)
       toast.error('Failed to send message. Please try again.')
       return
     }
-  }, [chatId, content, createChat, router, createMessage, isStreaming])
+  }, [
+    chatId,
+    content,
+    createChat,
+    router,
+    createMessage,
+    isStreaming,
+    isEditing,
+    editingMessageId,
+    editAndRetryMessageAction,
+    attachments,
+    scrollToBottom
+  ])
 
   const retryMessage = useCallback(
     async (messageId: Id<'message'>) => {
@@ -250,9 +320,46 @@ export function ChatProvider({
     [createChatBranchMutation, disableActions, enableActions, router]
   )
 
+  const setIsEditingCallback = useCallback(
+    (editing: boolean, message: Doc<'message'> | null) => {
+      if (editing && message) {
+        setIsEditing(true)
+        setEditingMessageId(message._id)
+        textareaRef.current?.focus()
+        setPreviousContent(content)
+        setContent(message.content)
+      } else {
+        setIsEditing(false)
+        setEditingMessageId(null)
+        setContent(previousContent)
+        textareaRef.current?.focus()
+      }
+    },
+    [content, previousContent]
+  )
+
+  const summarizeChat = useCallback(
+    async (chatId: Id<'chat'>) => {
+      try {
+        disableActions()
+
+        const summary = await summarizeChatAction({ chatId })
+
+        setSummary(summary)
+      } catch (error) {
+        console.error('Failed to summarize chat:', error)
+        toast.error('Failed to summarize chat. Please try again.')
+      } finally {
+        enableActions()
+      }
+    },
+    [summarizeChatAction, disableActions, enableActions]
+  )
+
   return (
     <chatContext.Provider
       value={{
+        wrapperRef,
         drivenIds,
         chat,
         actionsEnabled,
@@ -273,7 +380,15 @@ export function ChatProvider({
         cachedChats,
         cacheChat,
         retryMessage,
-        createChatBranch
+        createChatBranch,
+        textareaRef,
+        scrollToBottom,
+        isEditing,
+        setIsEditing: setIsEditingCallback,
+        editingMessageId,
+        setDrivenIds,
+        summarizeChat,
+        summary
       }}
     >
       {children}

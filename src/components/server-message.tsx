@@ -1,6 +1,7 @@
+import { useChat } from '@/chat/chat'
 import { useStream } from '@/hooks/use-stream'
 import type { Id } from 'convex/_generated/dataModel'
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { MarkdownContent } from './markdown-content'
 
 type ServerMessageProps = {
@@ -16,32 +17,32 @@ export function ServerMessage({
   isDriven,
   messageId
 }: ServerMessageProps) {
-  console.log('ServerMessage', {
-    isDriven,
-    messageId
-  })
+  const { scrollToBottom } = useChat()
   const { text, status } = useStream({
     isDriven,
     messageId
   })
 
-  const isCurrentlyStreaming = useMemo(() => {
-    if (!isDriven) return false
-
-    return status === 'streaming' || status === 'pending'
-  }, [isDriven, status])
-
   useEffect(() => {
-    if (isCurrentlyStreaming || !isDriven) return
+    if (!isDriven) return
 
-    onStopStreaming()
-  }, [isCurrentlyStreaming, isDriven, onStopStreaming])
+    if (status === 'done' || status === 'error' || status === 'timeout') {
+      onStopStreaming()
+    }
+  }, [status, onStopStreaming, isDriven])
 
   useEffect(() => {
     if (!text) return
 
     onFinish()
   }, [text, onFinish])
+
+  // Auto-scroll when text is being streamed
+  useEffect(() => {
+    if (text && isDriven && (status === 'streaming' || status === 'pending')) {
+      scrollToBottom(true)
+    }
+  }, [text, isDriven, status, scrollToBottom])
 
   return <MarkdownContent>{text}</MarkdownContent>
 }

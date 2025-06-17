@@ -1,8 +1,8 @@
 import { useChat } from '@/chat/chat'
 import { useResponsiveAttachmentLimit } from '@/hooks/use-responsive-attachment-limit'
-import { ArrowUp, Sparkles, X } from 'lucide-react'
+import { ArrowUp, PenOff, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import { AttachmentPreview } from './attachment-preview'
 import { AttachmentsDialog } from './attachments-dialog'
 import { FileUpload } from './file-upload'
@@ -21,9 +21,15 @@ export function ChatBox() {
     enhancePrompt,
     removeAttachment,
     send,
-    isStreaming
+    isStreaming,
+    isEditing,
+    setIsEditing,
+    textareaRef,
+    summarizeChat,
+    summary,
+    chat
   } = useChat()
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   const attachmentLimit = useResponsiveAttachmentLimit()
 
   const visibleAttachments = useMemo(() => {
@@ -44,7 +50,7 @@ export function ChatBox() {
 
   useEffect(() => {
     textareaRef.current?.focus()
-  }, [])
+  }, [textareaRef])
 
   return (
     <div className="p-4 w-full">
@@ -100,7 +106,10 @@ export function ChatBox() {
           )}
         </AnimatePresence>
 
-        <div className="border rounded-2xl bg-background/75 backdrop-blur-lg p-2 z-10 relative">
+        <div
+          className="border rounded-2xl bg-background/75 backdrop-blur-lg p-2 z-10 relative data-[editing='true']:border-primary"
+          data-editing={isEditing ? 'true' : 'false'}
+        >
           <div className="mb-2">
             <Textarea
               ref={textareaRef}
@@ -135,6 +144,62 @@ export function ChatBox() {
               </TooltipContent>
             </Tooltip>
 
+            {isEditing && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-7 mr-2"
+                    onClick={() => setIsEditing(false, null)}
+                  >
+                    <PenOff className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cancel editing</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* {summary ? (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-7 mr-2"
+                    onClick={() => summarizeChat(chat?._id as Id<'chat'>)}
+                  >
+                    <NotebookText className="size-3.5" />
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Chat Summary</h4>
+                    <p className="text-sm text-muted-foreground">{summary}</p>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-7 mr-2"
+                    onClick={() => summarizeChat(chat?._id as Id<'chat'>)}
+                    disabled={!actionsEnabled || !!summary}
+                  >
+                    <NotebookText className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Summarize chat</p>
+                </TooltipContent>
+              </Tooltip>
+            )} */}
+
             <div className="flex-1" />
 
             <div className="flex items-center gap-1">
@@ -168,10 +233,9 @@ export function ChatBox() {
                   <Button
                     onClick={send}
                     disabled={
-                      isStreaming ||
-                      (actionsEnabled &&
-                        !content.trim() &&
-                        attachments.length === 0)
+                      !actionsEnabled ||
+                      (isStreaming && !isEditing) ||
+                      (isEditing && !content.trim() && attachments.length === 0)
                     }
                     size="icon"
                     className="size-7 border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10"
