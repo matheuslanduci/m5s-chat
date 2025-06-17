@@ -1,5 +1,6 @@
+import { useChat } from '@/chat/chat'
+import { useMessage } from '@/chat/message'
 import { useIsMobile } from '@/hooks/use-mobile'
-import type { Doc } from 'convex/_generated/dataModel'
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,32 +18,34 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 type ChatMessageProps = {
   author: 'user' | 'assistant'
   children: React.ReactNode
-  message: Doc<'message'> | null
   creationTime: number
-  // Assistant-specific props
   currentResponseIndex?: number
   totalResponses?: number
   onResponseIndexChange?: (index: number) => void
   modelName?: string
   provider?: 'openai' | 'google' | 'anthropic' | 'deepseek'
   responseCreationTime?: number
-  onRetry?: () => void
 }
 
 export function ChatMessage({
   author,
   children,
-  message,
   creationTime,
   currentResponseIndex = 0,
   totalResponses = 1,
   onResponseIndexChange,
   modelName,
   provider,
-  responseCreationTime,
-  onRetry
+  responseCreationTime
 }: ChatMessageProps) {
   const isMobile = useIsMobile()
+  const { retryMessage, createChatBranch } = useChat()
+  const { setSelectedIndex, message } = useMessage()
+
+  const retry = () => {
+    setSelectedIndex(message?.responses?.length || 1)
+    retryMessage(message?._id)
+  }
 
   if (author === 'user') {
     return (
@@ -78,7 +81,7 @@ export function ChatMessage({
                   size="icon"
                   className="size-6"
                   onClick={() => {
-                    onRetry?.()
+                    retry()
                   }}
                 >
                   <RotateCcw className="size-3.5" />
@@ -247,7 +250,12 @@ export function ChatMessage({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-6">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
+                  onClick={() => createChatBranch(message._id)}
+                >
                   <GitBranch className="size-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -262,7 +270,7 @@ export function ChatMessage({
                   size="icon"
                   className="size-6"
                   onClick={() => {
-                    onRetry?.()
+                    retry()
                   }}
                 >
                   <RotateCcw className="size-3.5" />

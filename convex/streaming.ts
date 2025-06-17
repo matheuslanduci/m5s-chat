@@ -142,7 +142,15 @@ format.`
         })
       }
 
-      for (const msg of messages) {
+      console.log('messages:', messages)
+
+      const filteredMessages = messages.filter(
+        (msg) => msg._creationTime <= message._creationTime
+      )
+
+      console.log('Filtered messages:', filteredMessages)
+
+      for (const msg of filteredMessages) {
         if (msg.content) {
           messageHistory.push({
             role: 'user',
@@ -150,7 +158,11 @@ format.`
           })
         }
 
-        if (msg.responses && msg.responses.length > 0) {
+        if (
+          msg.responses &&
+          msg.responses.length > 0 &&
+          msg._id !== message._id
+        ) {
           const lastResponse = msg.responses[msg.responses.length - 1]
 
           messageHistory.push({
@@ -159,6 +171,8 @@ format.`
           })
         }
       }
+
+      console.log('Message history:', messageHistory)
 
       const stream = streamText({
         messages: messageHistory,

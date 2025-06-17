@@ -176,3 +176,52 @@ export const _getChatById = internalQuery({
     return ctx.db.get(args.chatId)
   }
 })
+
+export const createChatBranch = mutation({
+  args: { messageId: v.id('message'), clientId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const message = await ctx.db.get(args.messageId)
+
+    if (!message) throw unauthorized
+
+    const chat = await ctx.db.get(message.chatId)
+
+    if (!chat?.collaborators?.includes(user.subject)) throw unauthorized
+
+    const newChatId = await ctx.db.insert('chat', {
+      ownerId: user.subject,
+      clientId: args.clientId,
+      initialPrompt: message.content,
+      pinned: false,
+      title: chat.title,
+      contextTokens: 0,
+      collaborators: [user.subject],
+      isBranch: true,
+      branchOf: chat._id
+    })
+
+    const messages = await ctx.db
+      .query('message')
+      .withIndex('byChatId', (q) => q.eq('chatId', chat._id))
+      .filter((q) => q.lte(q.field('_creationTime'), message._creationTime))
+      .collect()
+
+    for (const msg of messages) {
+      await ctx.db.insert('message', {
+        content: msg.content,
+        userId: msg.userId,
+        modelId: msg.modelId,
+        responses: msg.responses,
+        streamId: msg.streamId,
+        attachments: msg.attachments,
+        chatId: newChatId
+      })
+    }
+
+    return newChatId
+  }
+})

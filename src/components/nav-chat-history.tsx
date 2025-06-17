@@ -1,7 +1,7 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
 import type { Doc } from 'convex/_generated/dataModel'
 import { useMutation, useQuery } from 'convex/react'
-import { MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react'
+import { GitBranch, MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
@@ -110,11 +110,14 @@ function ChatItem({ chat, onPin, onDelete }: ChatItemProps) {
         <Link
           to="/chat/$id"
           params={{ id: chat.clientId }}
-          className="flex items-center justify-between text-foreground"
+          className="flex items-center text-foreground"
           activeProps={{
             className: 'bg-accent text-accent-foreground'
           }}
         >
+          {chat.isBranch && (
+            <GitBranch className="size-3 text-muted-foreground" />
+          )}
           <div className="flex min-w-0">
             <div className="font-medium text-sm truncate">
               {formatChatTitle(chat)}

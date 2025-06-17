@@ -1,8 +1,8 @@
 import { useChat } from '@/chat/chat'
+import { MessageProvider } from '@/chat/message'
 import type { Id } from 'convex/_generated/dataModel'
 import { useQuery } from 'convex/react'
 import { useEffect, useRef } from 'react'
-import { Fragment } from 'react/jsx-runtime'
 import { api } from '../../convex/_generated/api'
 import { ChatMessage } from './chat-message'
 import { ChatReplies } from './chat-replies'
@@ -38,12 +38,12 @@ export function ChatMessages() {
     <div className="flex-1 flex flex-col min-h-0 px-6 lg:px-0">
       <div className="w-full max-w-3xl mx-auto relative py-4">
         {messages?.map((message) => (
-          <Fragment key={message._id}>
+          <MessageProvider key={message._id} message={message}>
             <ChatMessage author="user" creationTime={message._creationTime}>
               <MarkdownContent>{message.content}</MarkdownContent>
             </ChatMessage>
             <ChatReplies message={message} />
-          </Fragment>
+          </MessageProvider>
         ))}
 
         <div ref={messageContainerEndRef} />

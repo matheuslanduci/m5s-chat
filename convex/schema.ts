@@ -51,7 +51,9 @@ export default defineSchema({
     contextTokens: v.optional(v.number()),
     initialPrompt: v.string(),
     collaborators: v.optional(v.array(v.string())),
-    lastMessageAt: v.optional(v.number())
+    lastMessageAt: v.optional(v.number()),
+    isBranch: v.optional(v.boolean()),
+    branchOf: v.optional(v.id('chat'))
   })
     .index('byOwnerId', ['ownerId'])
     .index('byClientId', ['clientId']),

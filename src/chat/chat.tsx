@@ -30,6 +30,7 @@ type ChatContext = {
   cachedChats: Map<Id<'chat'>, ChatWithMessages>
   cacheChat: (chat: ChatWithMessages) => void
   retryMessage: (messageId: Id<'message'>) => Promise<void>
+  createChatBranch: (messageId: Id<'message'>) => Promise<void>
 }
 
 export const chatContext = createContext<ChatContext>({} as ChatContext)
@@ -53,6 +54,7 @@ export function ChatProvider({
   const chat = useQuery(api.chat.getChat, chatId ? { chatId } : 'skip')
   const createChat = useAction(api.chat.createChat)
   const createMessage = useAction(api.message.createMessage)
+  const createChatBranchMutation = useMutation(api.chat.createChatBranch)
   const retryMessageAction = useAction(api.message.retryMessage)
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
   const enhancePromptAction = useAction(api.ai.enhancePrompt)
@@ -131,6 +133,8 @@ export function ChatProvider({
   }, [content, disableActions, enableActions, enhancePromptAction])
 
   const send = useCallback(async () => {
+    if (isStreaming) return
+
     if (!chatId) {
       try {
         const contentTrimmed = content.trim()
@@ -186,10 +190,12 @@ export function ChatProvider({
       toast.error('Failed to send message. Please try again.')
       return
     }
-  }, [chatId, content, createChat, router, createMessage])
+  }, [chatId, content, createChat, router, createMessage, isStreaming])
 
   const retryMessage = useCallback(
     async (messageId: Id<'message'>) => {
+      if (isStreaming) return
+
       try {
         await retryMessageAction({
           messageId
@@ -207,7 +213,7 @@ export function ChatProvider({
         toast.error('Failed to retry message. Please try again.')
       }
     },
-    [retryMessageAction]
+    [retryMessageAction, isStreaming]
   )
 
   const cacheChat = useCallback((chat: ChatWithMessages) => {
@@ -216,6 +222,33 @@ export function ChatProvider({
       return prev
     })
   }, [])
+
+  const createChatBranch = useCallback(
+    async (messageId: Id<'message'>) => {
+      try {
+        const clientId = crypto.randomUUID()
+
+        disableActions()
+
+        await router.navigate({
+          to: '/chat/$id',
+          params: { id: clientId },
+          viewTransition: true
+        })
+
+        await createChatBranchMutation({
+          clientId,
+          messageId
+        })
+      } catch (error) {
+        console.error('Failed to create chat branch:', error)
+        toast.error('Failed to create chat branch. Please try again.')
+      } finally {
+        enableActions()
+      }
+    },
+    [createChatBranchMutation, disableActions, enableActions, router]
+  )
 
   return (
     <chatContext.Provider
@@ -239,7 +272,8 @@ export function ChatProvider({
         setChatId,
         cachedChats,
         cacheChat,
-        retryMessage
+        retryMessage,
+        createChatBranch
       }}
     >
       {children}

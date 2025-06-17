@@ -20,7 +20,8 @@ export function ChatBox() {
     clearAttachments,
     enhancePrompt,
     removeAttachment,
-    send
+    send,
+    isStreaming
   } = useChat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const attachmentLimit = useResponsiveAttachmentLimit()
@@ -167,9 +168,10 @@ export function ChatBox() {
                   <Button
                     onClick={send}
                     disabled={
-                      actionsEnabled &&
-                      !content.trim() &&
-                      attachments.length === 0
+                      isStreaming ||
+                      (actionsEnabled &&
+                        !content.trim() &&
+                        attachments.length === 0)
                     }
                     size="icon"
                     className="size-7 border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10"
