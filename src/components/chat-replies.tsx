@@ -12,7 +12,7 @@ type ChatRepliesProps = {
 export function ChatReplies({ message }: ChatRepliesProps) {
   const { drivenIds, setIsStreaming, retryMessage } = useChat()
   const [selectedIndex, setSelectedIndex] = useState<number>(
-    message.responses?.length || 0
+    message.responses?.length ? message.responses.length - 1 : 0
   )
 
   const response = message.responses?.[selectedIndex]
