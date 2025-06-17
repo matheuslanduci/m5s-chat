@@ -51,6 +51,7 @@ export function ChatProvider({
 
   const chat = useQuery(api.chat.getChat, chatId ? { chatId } : 'skip')
   const createChat = useAction(api.chat.createChat)
+  const createMessage = useAction(api.message.createMessage)
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
   const enhancePromptAction = useAction(api.ai.enhancePrompt)
 
@@ -157,8 +158,33 @@ export function ChatProvider({
         toast.error('Failed to create chat. Please try again.')
         return
       }
+
+      return
     }
-  }, [chatId, content, createChat, router])
+
+    try {
+      const contentTrimmed = content.trim()
+
+      setContent('')
+
+      const { messageId } = await createMessage({
+        chatId,
+        content: contentTrimmed
+      })
+
+      setDrivenIds((prev) => {
+        prev.add(messageId)
+
+        return prev
+      })
+
+      setIsStreaming(true)
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      toast.error('Failed to send message. Please try again.')
+      return
+    }
+  }, [chatId, content, createChat, router, createMessage])
 
   const cacheChat = useCallback((chat: ChatWithMessages) => {
     setCachedChats((prev) => {

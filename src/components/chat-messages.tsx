@@ -42,17 +42,11 @@ export function ChatMessages() {
             <ChatMessage author="user" creationTime={message._creationTime}>
               <MarkdownContent>{message.content}</MarkdownContent>
             </ChatMessage>
-            <ChatReplies
-              message={message}
-              scrollToBottomRef={messageContainerEndRef}
-            />
+            <ChatReplies message={message} />
           </Fragment>
         ))}
 
-        <div
-          className="w-0 h-0 absolute bottom-0"
-          ref={messageContainerEndRef}
-        />
+        <div ref={messageContainerEndRef} />
       </div>
     </div>
   )

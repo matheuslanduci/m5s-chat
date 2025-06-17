@@ -29,6 +29,7 @@ export function AttachmentPreview({
 
   const handleRemove = async (event: React.MouseEvent) => {
     event.stopPropagation()
+    setOpen(false)
 
     try {
       setIsRemoving(true)
@@ -48,7 +49,13 @@ export function AttachmentPreview({
   }
 
   return (
-    <HoverCard open={open} onOpenChange={setOpen}>
+    <HoverCard
+      open={open}
+      onOpenChange={(val) => {
+        if (isRemoving) return
+        setOpen(val)
+      }}
+    >
       <HoverCardTrigger asChild>
         <div
           className="relative inline-flex items-center gap-2 bg-muted px-2 py-1 rounded-md border cursor-pointer hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"

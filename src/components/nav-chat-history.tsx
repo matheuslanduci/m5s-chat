@@ -110,7 +110,7 @@ function ChatItem({ chat, onPin, onDelete }: ChatItemProps) {
         <Link
           to="/chat/$id"
           params={{ id: chat.clientId }}
-          className="flex items-center justify-between"
+          className="flex items-center justify-between text-foreground"
           activeProps={{
             className: 'bg-accent text-accent-foreground'
           }}
@@ -126,7 +126,7 @@ function ChatItem({ chat, onPin, onDelete }: ChatItemProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuAction>
+          <SidebarMenuAction showOnHover>
             <MoreHorizontal className="size-4" />
           </SidebarMenuAction>
         </DropdownMenuTrigger>

@@ -54,7 +54,7 @@ export function ChatBox() {
               initial={{ y: 60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{
-                y: 60,
+                y: 20,
                 opacity: 0
               }}
               className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background/75 backdrop-blur-lg p-2 pb-16"

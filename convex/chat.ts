@@ -2,7 +2,13 @@ import type { StreamId } from '@convex-dev/persistent-text-streaming'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
-import { action, internalMutation, mutation, query } from './_generated/server'
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query
+} from './_generated/server'
 import { unauthorized } from './error'
 import { streamingComponent } from './streaming'
 
@@ -151,5 +157,15 @@ export const deleteChat = mutation({
     }
 
     return ctx.db.delete(chat._id)
+  }
+})
+
+export const _getChatByClientId = internalQuery({
+  args: { clientId: v.string() },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query('chat')
+      .withIndex('byClientId', (q) => q.eq('clientId', args.clientId))
+      .first()
   }
 })

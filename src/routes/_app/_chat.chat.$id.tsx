@@ -37,7 +37,7 @@ function RouteComponent() {
                 </div>
 
                 <div
-                  className="absolute inset-0 overflow-y-scroll sm:pt-12 z-[5]"
+                  className="absolute inset-0 overflow-y-scroll sm:pt-12 z-[5] scrollbar-custom"
                   style={{
                     paddingBottom: 160,
                     scrollbarGutter: 'stable both-edges'

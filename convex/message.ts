@@ -1,7 +1,18 @@
-import { StreamIdValidator } from '@convex-dev/persistent-text-streaming'
+import {
+  type StreamId,
+  StreamIdValidator
+} from '@convex-dev/persistent-text-streaming'
 import { v } from 'convex/values'
-import { internalMutation, internalQuery, query } from './_generated/server'
-import { serverError, unauthorized } from './error'
+import { internal } from './_generated/api'
+import type { Doc, Id } from './_generated/dataModel'
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  query
+} from './_generated/server'
+import { notFoundError, serverError, unauthorized } from './error'
+import { streamingComponent } from './streaming'
 
 export const _createMessage = internalMutation({
   args: {
@@ -93,5 +104,48 @@ export const _addResponseToMessage = internalMutation({
         }
       ]
     })
+  }
+})
+
+export const createMessage = action({
+  args: {
+    chatId: v.string(),
+    content: v.string()
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const chat = await ctx.runQuery(internal.chat._getChatByClientId, {
+      clientId: args.chatId
+    })
+
+    if (!chat) throw notFoundError
+
+    if (!chat.collaborators?.includes(user.subject)) throw unauthorized
+
+    const [model, streamId] = (await Promise.all([
+      ctx.runAction(internal.model._resolveModel, {
+        userId: user.subject,
+        prompt: args.content
+      }),
+      streamingComponent.createStream(ctx)
+    ])) as [Doc<'model'>, StreamId]
+
+    const messageId: Id<'message'> = await ctx.runMutation(
+      internal.message._createMessage,
+      {
+        chatId: chat._id,
+        content: args.content,
+        streamId: streamId,
+        userId: user.subject,
+        modelId: model._id
+      }
+    )
+
+    return {
+      messageId
+    }
   }
 })

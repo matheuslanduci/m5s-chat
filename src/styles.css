@@ -56,7 +56,7 @@ code {
 
 .dark {
   --background: oklch(0.24 0 0);
-  --foreground: oklch(0.985 0 0);
+  --foreground: oklch(94.309% 0.00011 271.152);
   --card: oklch(0.24 0 0);
   --card-foreground: oklch(0.8297 0 0);
   --popover: oklch(0.28 0 0);
@@ -402,4 +402,52 @@ code {
   .markdown-table-wrapper {
     @apply mx-0 px-0;
   }
+}
+
+.scrollbar-hidden {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.scrollbar-custom {
+  scrollbar-width: thin; /* Firefox - thin scrollbar */
+  scrollbar-color: oklch(0.556 0 0) transparent; /* Firefox - grey thumb, transparent track */
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  width: 6px; /* Webkit - thin width */
+  height: 6px; /* Webkit - thin height for horizontal scrollbar */
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent; /* Webkit - transparent track */
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: oklch(0.556 0 0); /* Webkit - grey thumb using CSS variable */
+  border-radius: 3px; /* Webkit - rounded corners */
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.4 0 0); /* Webkit - darker grey on hover */
+}
+
+/* Dark mode adjustments */
+.dark .scrollbar-custom {
+  scrollbar-color: oklch(0.708 0 0) transparent; /* Firefox - lighter grey for dark mode */
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: oklch(0.708 0 0); /* Webkit - lighter grey for dark mode */
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.8 0 0); /* Webkit - even lighter grey on hover in dark mode */
 }

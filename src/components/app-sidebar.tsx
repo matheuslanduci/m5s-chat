@@ -32,13 +32,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent className="flex flex-col">
+        <SidebarGroup className="flex-shrink-0">
           <Button type="button" asChild>
             <Link to="/">New Chat</Link>
           </Button>
         </SidebarGroup>
-        <NavChatHistory />
+        <div className="flex-1 overflow-auto scrollbar-hidden">
+          <NavChatHistory />
+        </div>
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

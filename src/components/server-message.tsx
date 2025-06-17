@@ -39,6 +39,8 @@ export function ServerMessage({
   useEffect(() => {
     if (isCurrentlyStreaming || !isDriven) return
 
+    console.log('Stream finished, calling onStopStreaming')
+
     onStopStreaming()
   }, [isCurrentlyStreaming, isDriven, onStopStreaming])
 
