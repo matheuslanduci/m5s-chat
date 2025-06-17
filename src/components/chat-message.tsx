@@ -132,7 +132,7 @@ export function ChatMessage({
   return (
     <div className="group">
       <div className="flex gap-3">
-        <div className="flex-1">
+        <div className="flex-1 max-w-3xl">
           <div className="markdown">{children}</div>
         </div>
       </div>

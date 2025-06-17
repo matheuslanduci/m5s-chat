@@ -1,8 +1,6 @@
 import { useChat } from '@/chat/chat'
-import { useAuth } from '@clerk/clerk-react'
-import type { StreamId } from '@convex-dev/persistent-text-streaming'
 import type { Doc } from 'convex/_generated/dataModel'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ChatMessage } from './chat-message'
 import { MarkdownContent } from './markdown-content'
 import { ServerMessage } from './server-message'
@@ -12,34 +10,12 @@ type ChatRepliesProps = {
 }
 
 export function ChatReplies({ message }: ChatRepliesProps) {
-  const { getToken } = useAuth()
-  const [authToken, setAuthToken] = useState<string | null>(null)
   const { drivenIds, setIsStreaming, retryMessage } = useChat()
-  const [selectedIndex, setSelectedIndex] = useState<number>(0)
+  const [selectedIndex, setSelectedIndex] = useState<number>(
+    message.responses?.length || 0
+  )
 
   const response = message.responses?.[selectedIndex]
-
-  useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        const token = await getToken({
-          template: 'convex'
-        })
-        setAuthToken(token)
-      } catch (error) {
-        console.error('Failed to get auth token:', error)
-        setAuthToken(null)
-      }
-    }
-
-    fetchToken()
-
-    const interval = setInterval(fetchToken, 60 * 1000 * 30) // Refresh token every 30 minutes
-
-    return () => clearInterval(interval)
-  }, [getToken])
-
-  if (!authToken) return null
 
   return (
     <ChatMessage
@@ -53,10 +29,8 @@ export function ChatReplies({ message }: ChatRepliesProps) {
       provider={response?.provider}
       responseCreationTime={response?.createdAt}
       onRetry={() => {
-        if (response) {
-          setSelectedIndex(message.responses?.length || 1)
-          retryMessage(message._id)
-        }
+        setSelectedIndex(message.responses?.length || 1)
+        retryMessage(message._id)
       }}
     >
       {response ? (
@@ -69,8 +43,7 @@ export function ChatReplies({ message }: ChatRepliesProps) {
             setIsStreaming(false)
           }}
           isDriven={drivenIds.has(message._id)}
-          streamId={message.streamId as StreamId | undefined}
-          authToken={authToken}
+          messageId={message._id}
         />
       )}
     </ChatMessage>

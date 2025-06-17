@@ -1,10 +1,10 @@
 import {
   PersistentTextStreaming,
-  type StreamId,
-  StreamIdValidator
+  type StreamId
 } from '@convex-dev/persistent-text-streaming'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { streamText } from 'ai'
+import { v } from 'convex/values'
 import z from 'zod'
 import { components, internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
@@ -17,17 +17,14 @@ export const streamingComponent = new PersistentTextStreaming(
 
 export const getStreamBody = query({
   args: {
-    streamId: StreamIdValidator
+    messageId: v.id('message')
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
 
     if (!user) throw unauthorized
 
-    const message = await ctx.db
-      .query('message')
-      .withIndex('byStreamId', (q) => q.eq('streamId', args.streamId))
-      .first()
+    const message = await ctx.db.get(args.messageId)
 
     if (!message) throw unauthorized
 
@@ -37,7 +34,7 @@ export const getStreamBody = query({
 
     return await streamingComponent.getStreamBody(
       ctx,
-      args.streamId as StreamId
+      message.streamId as StreamId
     )
   }
 })
@@ -61,7 +58,7 @@ export const streamChat = httpAction(async (ctx, request) => {
 
   const parsed = z
     .object({
-      streamId: z.string()
+      messageId: z.string()
     })
     .safeParse(body)
 
@@ -77,25 +74,32 @@ export const streamChat = httpAction(async (ctx, request) => {
     })
   }
 
-  const { streamId } = parsed.data
+  const { messageId } = parsed.data
+
+  const message = await ctx.runQuery(internal.message._getMessageById, {
+    messageId: messageId as Id<'message'>
+  })
+
+  if (!message) {
+    return new Response('Message not found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    })
+  }
 
   const response = await streamingComponent.stream(
     ctx,
     request,
-    streamId as StreamId,
-    async (ctx, _, streamId, append) => {
+    message.streamId as StreamId,
+    async (ctx, _req, _streamId, append) => {
       const user = await ctx.auth.getUserIdentity()
 
       if (!user) throw unauthorized
-
-      const message = await ctx.runQuery(
-        internal.message._getMessageByStreamId,
-        {
-          streamId: streamId
-        }
-      )
-
-      if (!message) throw serverError
 
       const openRouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY

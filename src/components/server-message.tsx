@@ -1,34 +1,29 @@
-import { env } from '@/lib/env'
-import type { StreamId } from '@convex-dev/persistent-text-streaming'
-import { useStream } from '@convex-dev/persistent-text-streaming/react'
+import { useStream } from '@/hooks/use-stream'
+import type { Id } from 'convex/_generated/dataModel'
 import { useEffect, useMemo } from 'react'
-import { api } from '../../convex/_generated/api'
 import { MarkdownContent } from './markdown-content'
 
 type ServerMessageProps = {
   onFinish: () => void
   onStopStreaming: () => void
   isDriven: boolean
-  streamId?: StreamId
-  authToken: string
+  messageId?: Id<'message'> | undefined
 }
 
 export function ServerMessage({
   onFinish,
   onStopStreaming,
   isDriven,
-  streamId,
-  authToken
+  messageId
 }: ServerMessageProps) {
-  const { text, status } = useStream(
-    api.streaming.getStreamBody,
-    new URL(`${env.VITE_CONVEX_SITE}/chat`),
+  console.log('ServerMessage', {
     isDriven,
-    streamId,
-    {
-      authToken
-    }
-  )
+    messageId
+  })
+  const { text, status } = useStream({
+    isDriven,
+    messageId
+  })
 
   const isCurrentlyStreaming = useMemo(() => {
     if (!isDriven) return false

@@ -93,11 +93,6 @@ export const _addResponseToMessage = internalMutation({
 
     if (!message) throw serverError
 
-    console.log('Adding response to message:', {
-      messageId: args.messageId,
-      response: args.response
-    })
-
     return ctx.db.patch(args.messageId, {
       responses: [
         ...(message.responses || []),
@@ -152,7 +147,8 @@ export const createMessage = action({
     )
 
     return {
-      messageId
+      messageId,
+      streamId
     }
   }
 })
