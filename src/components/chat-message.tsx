@@ -171,7 +171,10 @@ export function ChatMessage({
               </Tooltip>
 
               <span className="text-xs text-muted-foreground px-1">
-                {currentResponseIndex + 1}/{totalResponses}
+                {currentResponseIndex + 1}/
+                {currentResponseIndex + 1 > totalResponses
+                  ? currentResponseIndex + 1
+                  : totalResponses}
               </span>
 
               <Tooltip>
