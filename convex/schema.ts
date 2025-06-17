@@ -66,6 +66,7 @@ export default defineSchema({
         v.object({
           content: v.string(),
           modelId: v.optional(v.id('model')),
+          modelName: v.optional(v.string()),
           provider: v.union(
             v.literal('openai'),
             v.literal('anthropic'),

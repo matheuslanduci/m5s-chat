@@ -14,7 +14,7 @@ type ChatRepliesProps = {
 export function ChatReplies({ message }: ChatRepliesProps) {
   const { getToken } = useAuth()
   const [authToken, setAuthToken] = useState<string | null>(null)
-  const { drivenIds, setIsStreaming } = useChat()
+  const { drivenIds, setIsStreaming, retryMessage } = useChat()
   const [selectedIndex, setSelectedIndex] = useState<number>(0)
 
   const response = message.responses?.[selectedIndex]
@@ -33,6 +33,10 @@ export function ChatReplies({ message }: ChatRepliesProps) {
     }
 
     fetchToken()
+
+    const interval = setInterval(fetchToken, 60 * 1000 * 30) // Refresh token every 30 minutes
+
+    return () => clearInterval(interval)
   }, [getToken])
 
   if (!authToken) return null
@@ -40,7 +44,20 @@ export function ChatReplies({ message }: ChatRepliesProps) {
   return (
     <ChatMessage
       author="assistant"
+      message={message}
       creationTime={response?.createdAt || Date.now()}
+      currentResponseIndex={selectedIndex}
+      totalResponses={message.responses?.length || 1}
+      onResponseIndexChange={setSelectedIndex}
+      modelName={response?.modelName}
+      provider={response?.provider}
+      responseCreationTime={response?.createdAt}
+      onRetry={() => {
+        if (response) {
+          setSelectedIndex(message.responses?.length || 1)
+          retryMessage(message._id)
+        }
+      }}
     >
       {response ? (
         <MarkdownContent>{response.content}</MarkdownContent>
@@ -50,7 +67,6 @@ export function ChatReplies({ message }: ChatRepliesProps) {
           onFinish={() => {}}
           onStopStreaming={() => {
             setIsStreaming(false)
-            drivenIds.delete(message._id)
           }}
           isDriven={drivenIds.has(message._id)}
           streamId={message.streamId as StreamId | undefined}

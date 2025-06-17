@@ -169,3 +169,10 @@ export const _getChatByClientId = internalQuery({
       .first()
   }
 })
+
+export const _getChatById = internalQuery({
+  args: { chatId: v.id('chat') },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.chatId)
+  }
+})

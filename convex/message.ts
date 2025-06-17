@@ -77,6 +77,7 @@ export const _addResponseToMessage = internalMutation({
     response: v.object({
       content: v.string(),
       modelId: v.optional(v.id('model')),
+      modelName: v.optional(v.string()),
       provider: v.union(
         v.literal('openai'),
         v.literal('anthropic'),
@@ -92,12 +93,18 @@ export const _addResponseToMessage = internalMutation({
 
     if (!message) throw serverError
 
+    console.log('Adding response to message:', {
+      messageId: args.messageId,
+      response: args.response
+    })
+
     return ctx.db.patch(args.messageId, {
       responses: [
         ...(message.responses || []),
         {
           content: args.response.content,
           modelId: args.response.modelId,
+          modelName: args.response.modelName,
           provider: args.response.provider,
           tokens: args.response.tokens,
           createdAt: args.response.createdAt
@@ -147,5 +154,79 @@ export const createMessage = action({
     return {
       messageId
     }
+  }
+})
+
+export const retryMessage = action({
+  args: {
+    messageId: v.id('message')
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ messageId: Id<'message'>; streamId: StreamId }> => {
+    const user = await ctx.auth.getUserIdentity()
+
+    if (!user) throw unauthorized
+
+    const message: Doc<'message'> | null = await ctx.runQuery(
+      internal.message._getMessageById,
+      {
+        messageId: args.messageId
+      }
+    )
+
+    if (!message) throw notFoundError
+
+    const chat: Doc<'chat'> | null = await ctx.runQuery(
+      internal.chat._getChatById,
+      {
+        chatId: message.chatId
+      }
+    )
+
+    if (!chat) throw notFoundError
+
+    if (!chat.collaborators?.includes(user.subject)) throw unauthorized
+
+    const [model, streamId] = (await Promise.all([
+      ctx.runAction(internal.model._resolveModel, {
+        userId: user.subject,
+        prompt: message.content
+      }),
+      streamingComponent.createStream(ctx)
+    ])) as [Doc<'model'>, StreamId]
+
+    await ctx.runMutation(internal.message._editMessageStreamId, {
+      messageId: message._id,
+      streamId,
+      modelId: model._id
+    })
+
+    return {
+      messageId: message._id,
+      streamId
+    }
+  }
+})
+
+export const _getMessageById = internalQuery({
+  args: { messageId: v.id('message') },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.messageId)
+  }
+})
+
+export const _editMessageStreamId = internalMutation({
+  args: {
+    messageId: v.id('message'),
+    streamId: StreamIdValidator,
+    modelId: v.optional(v.id('model'))
+  },
+  handler: async (ctx, args) => {
+    return ctx.db.patch(args.messageId, {
+      streamId: args.streamId,
+      modelId: args.modelId
+    })
   }
 })

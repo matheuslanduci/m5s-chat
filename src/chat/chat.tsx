@@ -29,6 +29,7 @@ type ChatContext = {
   setChatId: (chatId: string | undefined) => void
   cachedChats: Map<Id<'chat'>, ChatWithMessages>
   cacheChat: (chat: ChatWithMessages) => void
+  retryMessage: (messageId: Id<'message'>) => Promise<void>
 }
 
 export const chatContext = createContext<ChatContext>({} as ChatContext)
@@ -52,6 +53,7 @@ export function ChatProvider({
   const chat = useQuery(api.chat.getChat, chatId ? { chatId } : 'skip')
   const createChat = useAction(api.chat.createChat)
   const createMessage = useAction(api.message.createMessage)
+  const retryMessageAction = useAction(api.message.retryMessage)
   const deleteAttachmentMutation = useMutation(api.attachment.deleteAttachment)
   const enhancePromptAction = useAction(api.ai.enhancePrompt)
 
@@ -186,6 +188,28 @@ export function ChatProvider({
     }
   }, [chatId, content, createChat, router, createMessage])
 
+  const retryMessage = useCallback(
+    async (messageId: Id<'message'>) => {
+      try {
+        await retryMessageAction({
+          messageId
+        })
+
+        setDrivenIds((prev) => {
+          prev.add(messageId)
+
+          return prev
+        })
+
+        setIsStreaming(true)
+      } catch (error) {
+        console.error('Failed to retry message:', error)
+        toast.error('Failed to retry message. Please try again.')
+      }
+    },
+    [retryMessageAction]
+  )
+
   const cacheChat = useCallback((chat: ChatWithMessages) => {
     setCachedChats((prev) => {
       prev.set(chat._id, chat)
@@ -214,7 +238,8 @@ export function ChatProvider({
         chatId,
         setChatId,
         cachedChats,
-        cacheChat
+        cacheChat,
+        retryMessage
       }}
     >
       {children}

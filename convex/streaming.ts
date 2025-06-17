@@ -168,6 +168,7 @@ format.`
             response: {
               content: response.text,
               modelId: message.modelId,
+              modelName: model.name,
               provider: model.provider,
               tokens: response.usage.completionTokens,
               createdAt: Date.now()
