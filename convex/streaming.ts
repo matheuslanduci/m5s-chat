@@ -92,15 +92,13 @@ export const streamChat = httpAction(async (ctx, request) => {
     })
   }
 
+  console.log('Streaming chat for message:', message.streamId)
+
   const response = await streamingComponent.stream(
     ctx,
     request,
     message.streamId as StreamId,
     async (ctx, _req, _streamId, append) => {
-      const user = await ctx.auth.getUserIdentity()
-
-      if (!user) throw unauthorized
-
       const openRouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY
       })

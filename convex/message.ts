@@ -193,6 +193,8 @@ export const retryMessage = action({
       streamingComponent.createStream(ctx)
     ])) as [Doc<'model'>, StreamId]
 
+    console.log('new streamId', streamId)
+
     await ctx.runMutation(internal.message._editMessageStreamId, {
       messageId: message._id,
       streamId,
