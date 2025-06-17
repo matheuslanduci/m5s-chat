@@ -1,13 +1,14 @@
-import { Button } from '@/components/ui/button'
-import { useChat } from '@/context/chat-context'
+import { useChat } from '@/chat/chat'
 import { useMutation } from 'convex/react'
 import { Loader2, Paperclip } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
+import { Button } from './ui/button'
 
 export function FileUpload() {
-  const { addAttachment, attachments } = useChat()
+  const { addAttachment, attachments, disableActions, enableActions } =
+    useChat()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -15,7 +16,6 @@ export function FileUpload() {
   const createAttachment = useMutation(api.attachment.createAttachment)
 
   const handleFileSelect = () => {
-    // Check attachment limit before opening file dialog
     if (attachments.length >= 5) {
       toast.error('Maximum attachments reached', {
         description: 'You can upload up to 5 attachments per message.'
@@ -33,7 +33,6 @@ export function FileUpload() {
 
     if (!file) return
 
-    // Double check attachment limit
     if (attachments.length >= 5) {
       toast.error('Maximum attachments reached', {
         description: 'You can upload up to 5 attachments per message.'
@@ -68,6 +67,7 @@ export function FileUpload() {
 
     try {
       setIsUploading(true)
+      disableActions()
       toast.loading('Uploading file...', { id: 'file-upload' })
 
       const uploadUrl = await generateUploadUrl()
@@ -86,17 +86,17 @@ export function FileUpload() {
 
       const format = file.type.startsWith('image/') ? 'image' : 'pdf'
 
-      const attachmentId = await createAttachment({
+      const attachment = await createAttachment({
         storageId,
-        format
-      })
-
-      addAttachment({
-        id: attachmentId,
         format,
-        url: URL.createObjectURL(file), // Temporary URL for preview
         name: file.name
       })
+
+      if (!attachment) {
+        throw new Error('Failed to create attachment in database')
+      }
+
+      addAttachment(attachment)
 
       toast.success('File uploaded successfully', { id: 'file-upload' })
     } catch (error) {
@@ -106,6 +106,7 @@ export function FileUpload() {
         description: 'Please try again.'
       })
     } finally {
+      enableActions()
       setIsUploading(false)
 
       if (fileInputRef.current) {

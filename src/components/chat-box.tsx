@@ -1,33 +1,35 @@
-import { AttachmentPreview } from '@/components/attachment-preview'
-import { AttachmentsDialog } from '@/components/attachments-dialog'
-import { FileUpload } from '@/components/file-upload'
-import { ModelSelector } from '@/components/model-selector-dialog'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { useChat } from '@/context/chat-context'
+import { useChat } from '@/chat/chat'
 import { useResponsiveAttachmentLimit } from '@/hooks/use-responsive-attachment-limit'
-import { ArrowUp, Sparkles, X } from 'lucide-react'
+import { ArrowUp, PenOff, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
+import { AttachmentPreview } from './attachment-preview'
+import { AttachmentsDialog } from './attachments-dialog'
+import { FileUpload } from './file-upload'
+import { ModelSelector } from './model-selector'
+import { Button } from './ui/button'
+import { Textarea } from './ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
-export function ChatInput() {
+export function ChatBox() {
   const {
-    inputValue,
-    setInputValue,
-    isLoading,
-    send,
     attachments,
+    content,
+    setContent,
+    actionsEnabled,
     clearAttachments,
     enhancePrompt,
-    removeAttachment
+    removeAttachment,
+    send,
+    isStreaming,
+    isEditing,
+    setIsEditing,
+    textareaRef,
+    summarizeChat,
+    summary,
+    chat
   } = useChat()
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const attachmentLimit = useResponsiveAttachmentLimit()
 
   const visibleAttachments = useMemo(() => {
@@ -39,13 +41,6 @@ export function ChatInput() {
 
   const hiddenCount = attachments.length - attachmentLimit
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      send()
-    }
-  }
-
   const handleModelSelectorClose = () => {
     // LOL: It doesn't trigger focus if not wrapped in setTimeout
     setTimeout(() => {
@@ -55,26 +50,26 @@ export function ChatInput() {
 
   useEffect(() => {
     textareaRef.current?.focus()
-  }, [])
+  }, [textareaRef])
 
   return (
     <div className="p-4 w-full">
-      <div className="max-w-4xl mx-auto relative">
+      <div className="max-w-3xl mx-auto relative pointer-events-auto">
         <AnimatePresence>
           {attachments.length > 0 && (
             <motion.div
               initial={{ y: 60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{
-                y: 60,
+                y: 20,
                 opacity: 0
               }}
-              className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background p-2 pb-16"
+              className="border rounded-t-2xl flex flex-wrap gap-2 absolute -top-12 z-0 w-full bg-background/75 backdrop-blur-lg p-2 pb-16"
             >
               {visibleAttachments.map((attachment) => (
                 <AttachmentPreview
-                  key={attachment.id}
-                  attachmentId={attachment.id}
+                  key={attachment._id}
+                  attachmentId={attachment._id}
                   format={attachment.format}
                   url={attachment.url}
                   name={attachment.name}
@@ -97,7 +92,7 @@ export function ChatInput() {
                     size="icon"
                     className="absolute top-2 right-2 z-10"
                     onClick={clearAttachments}
-                    disabled={isLoading}
+                    disabled={!actionsEnabled}
                   >
                     <X className="size-3" />
                     <span className="sr-only">Clear attachments</span>
@@ -111,20 +106,28 @@ export function ChatInput() {
           )}
         </AnimatePresence>
 
-        <div className="border rounded-2xl bg-background p-2 z-10 relative">
+        <div
+          className="border rounded-2xl bg-background/75 backdrop-blur-lg p-2 z-10 relative data-[editing='true']:border-primary"
+          data-editing={isEditing ? 'true' : 'false'}
+        >
           <div className="mb-2">
             <Textarea
               ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyPress}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  send()
+                }
+              }}
               placeholder="Type your message..."
-              disabled={isLoading}
+              disabled={!actionsEnabled}
               className="border-0 px-2 shadow-none focus-visible:ring-0 min-h-12 max-h-32 resize-none !bg-transparent"
               rows={1}
             />
-          </div>{' '}
-          {/* Bottom Row: Model Selection, Attachment, Enhance & Send */}
+          </div>
+
           <div className="flex items-center gap-1">
             <ModelSelector onClose={handleModelSelectorClose} />
 
@@ -141,6 +144,62 @@ export function ChatInput() {
               </TooltipContent>
             </Tooltip>
 
+            {isEditing && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-7 mr-2"
+                    onClick={() => setIsEditing(false, null)}
+                  >
+                    <PenOff className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cancel editing</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* {summary ? (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-7 mr-2"
+                    onClick={() => summarizeChat(chat?._id as Id<'chat'>)}
+                  >
+                    <NotebookText className="size-3.5" />
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Chat Summary</h4>
+                    <p className="text-sm text-muted-foreground">{summary}</p>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-7 mr-2"
+                    onClick={() => summarizeChat(chat?._id as Id<'chat'>)}
+                    disabled={!actionsEnabled || !!summary}
+                  >
+                    <NotebookText className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Summarize chat</p>
+                </TooltipContent>
+              </Tooltip>
+            )} */}
+
             <div className="flex-1" />
 
             <div className="flex items-center gap-1">
@@ -151,14 +210,18 @@ export function ChatInput() {
                     variant="ghost"
                     size="icon"
                     className="shrink-0 size-7 mr-2"
-                    disabled={!inputValue.trim() || isLoading}
+                    disabled={
+                      !actionsEnabled ||
+                      !content.trim() ||
+                      attachments.length > 0
+                    }
                   >
                     <Sparkles className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {inputValue.trim()
+                    {content.trim()
                       ? 'Enhance prompt with AI'
                       : 'Enter text to enhance'}
                   </p>
@@ -170,8 +233,9 @@ export function ChatInput() {
                   <Button
                     onClick={send}
                     disabled={
-                      (!inputValue.trim() && attachments.length === 0) ||
-                      isLoading
+                      !actionsEnabled ||
+                      (isStreaming && !isEditing) ||
+                      (isEditing && !content.trim() && attachments.length === 0)
                     }
                     size="icon"
                     className="size-7 border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10"

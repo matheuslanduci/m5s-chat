@@ -1,50 +1,20 @@
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { Link } from '@tanstack/react-router'
-import { MoreHorizontal, Settings, Sparkles } from 'lucide-react'
+import { useChat } from '@/chat/chat'
+import { Separator } from '@/components/ui/separator'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 
 export function ChatHeader() {
+  const { chat } = useChat()
+
   return (
-    <div className="flex items-center justify-between p-4 border-b bg-card">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-6 text-primary" />
-          <h1 className="text-xl font-semibold">AI Chat</h1>
-        </div>
-        <Badge variant="secondary" className="gap-1">
-          <div className="size-2 bg-green-500 rounded-full animate-pulse" />
-          Online
-        </Badge>
+    <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear bg-background/50 backdrop-blur-md z-10">
+      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+        <SidebarTrigger className="-ml-1" />
+        <Separator
+          orientation="vertical"
+          className="mx-2 data-[orientation=vertical]:h-4"
+        />
+        <h1 className="text-base font-medium">{chat?.title}</h1>
       </div>
-      <div className="flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/settings">
-                <Settings className="size-4" />
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Settings</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>More options</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
+    </header>
   )
 }

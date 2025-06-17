@@ -26,8 +26,8 @@ code {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.66 0.23 34.5);
+  --primary-foreground: oklch(0.66 0.23 34.5);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -56,7 +56,7 @@ code {
 
 .dark {
   --background: oklch(0.24 0 0);
-  --foreground: oklch(0.985 0 0);
+  --foreground: oklch(94.309% 0.00011 271.152);
   --card: oklch(0.24 0 0);
   --card-foreground: oklch(0.8297 0 0);
   --popover: oklch(0.28 0 0);
@@ -134,4 +134,320 @@ code {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.button-grid {
+  display: grid;
+  grid-template-areas: "stack";
+}
+
+.button-grid-spinner {
+  visibility: hidden;
+  grid-area: stack;
+}
+
+.button-grid-content {
+  grid-area: stack;
+}
+
+.button-grid-loading .button-grid-spinner {
+  visibility: visible;
+}
+
+.button-grid-loading .button-grid-content {
+  visibility: hidden;
+}
+
+.markdown {
+  @apply text-sm leading-relaxed text-foreground;
+  line-height: 1.75;
+  max-width: none;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  @apply font-semibold text-foreground mt-8 mb-4;
+  line-height: 1.25;
+}
+
+.markdown h1 {
+  @apply text-3xl border-b border-border pb-3 mb-6;
+}
+
+.markdown h2 {
+  @apply text-2xl border-b border-border pb-2 mb-5;
+}
+
+.markdown h3 {
+  @apply text-xl mb-4;
+}
+
+.markdown h4 {
+  @apply text-lg mb-3;
+}
+
+.markdown h5,
+.markdown h6 {
+  @apply text-base mb-2;
+}
+
+.markdown p {
+  @apply leading-7;
+}
+
+.markdown p:not(:last-child) {
+  @apply mb-4;
+}
+
+.markdown blockquote {
+  @apply border-l-4 border-muted-foreground/20 pl-4 ml-0 mb-4 italic text-muted-foreground;
+}
+
+.markdown ul,
+.markdown ol {
+  @apply mb-4 pl-6;
+}
+
+.markdown ul {
+  @apply list-disc;
+}
+
+.markdown ol {
+  @apply list-decimal;
+}
+
+.markdown li {
+  @apply mb-2;
+}
+
+.markdown li p {
+  @apply mb-2;
+}
+
+.markdown pre {
+  @apply bg-muted rounded-lg mb-4 overflow-x-auto text-sm;
+
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+}
+
+.markdown code {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+
+  color: var(--foreground);
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+}
+
+.markdown pre code {
+  @apply bg-transparent p-0 text-sm;
+
+  color: inherit;
+}
+
+.markdown a {
+  @apply text-primary underline hover:text-primary/80 transition-colors;
+}
+
+.markdown strong {
+  @apply font-semibold text-foreground;
+}
+
+.markdown em {
+  @apply italic;
+}
+
+.markdown img {
+  @apply max-w-full h-auto rounded-lg mb-4 shadow-sm;
+}
+
+.markdown table {
+  @apply w-full border-collapse rounded-lg overflow-hidden shadow-sm;
+}
+
+.markdown th,
+.markdown td {
+  @apply px-4 py-3 text-left;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown th:last-child,
+.markdown td:last-child {
+  border-right: none;
+}
+
+.markdown thead tr:last-child th {
+  border-bottom: 2px solid var(--border);
+}
+
+.markdown th {
+  @apply bg-muted font-semibold text-muted-foreground text-sm uppercase tracking-wide;
+}
+
+.markdown td {
+  @apply text-sm;
+}
+
+.markdown tbody tr {
+  @apply transition-colors hover:bg-muted/30;
+}
+
+.markdown tbody tr:nth-child(even) {
+  @apply bg-muted/20;
+}
+
+.markdown tbody tr:nth-child(even):hover {
+  @apply bg-muted/40;
+}
+
+.markdown hr {
+  @apply border-0 border-t border-border my-8;
+}
+
+.markdown del {
+  @apply line-through opacity-70;
+}
+
+.markdown mark {
+  @apply bg-yellow-200 dark:bg-yellow-800/50 px-1 rounded;
+}
+
+.markdown pre[class*="language-"] {
+  @apply bg-muted border border-border;
+}
+
+.markdown :not(pre) > code[class*="language-"] {
+  @apply bg-muted border border-border rounded px-1;
+}
+
+.markdown div[class*="language-"] {
+  @apply bg-muted rounded-lg mb-4 overflow-x-auto border border-border;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace !important;
+}
+
+.markdown div[class*="language-"] pre {
+  @apply bg-transparent border-0 p-0 m-0;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace !important;
+}
+
+.markdown div[class*="language-"] code {
+  @apply bg-transparent border-0 p-0;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace !important;
+}
+
+.markdown div[class*="language-"] .token {
+  border: none !important;
+  outline: none !important;
+}
+
+/* Custom styling for inline code in lists */
+.markdown li code {
+  @apply bg-muted/80;
+}
+
+.markdown ul ul,
+.markdown ol ol,
+.markdown ul ol,
+.markdown ol ul {
+  @apply mt-2 mb-0;
+}
+
+.markdown dl {
+  @apply mb-4;
+}
+
+.markdown dt {
+  @apply font-semibold mb-1;
+}
+
+.markdown dd {
+  @apply ml-4 mb-2;
+}
+
+.markdown kbd {
+  @apply bg-muted border border-border rounded px-2 py-1 text-xs font-mono shadow-sm;
+}
+
+.markdown abbr {
+  @apply underline decoration-dotted cursor-help;
+}
+
+.markdown .relative.group {
+  @apply bg-muted rounded-lg overflow-hidden border border-border;
+}
+
+.markdown .relative.group:hover .opacity-0 {
+  @apply opacity-100;
+}
+
+@media (max-width: 768px) {
+  .markdown table {
+    @apply text-xs;
+  }
+
+  .markdown th,
+  .markdown td {
+    @apply px-2 py-2;
+  }
+}
+
+.markdown-table-wrapper {
+  @apply overflow-x-auto lg:-mx-4 lg:px-4 border rounded-lg;
+}
+
+@media (min-width: 768px) {
+  .markdown-table-wrapper {
+    @apply mx-0 px-0;
+  }
+}
+
+.scrollbar-hidden {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.scrollbar-custom {
+  scrollbar-width: thin; /* Firefox - thin scrollbar */
+  scrollbar-color: oklch(0.556 0 0) transparent; /* Firefox - grey thumb, transparent track */
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  width: 6px; /* Webkit - thin width */
+  height: 6px; /* Webkit - thin height for horizontal scrollbar */
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent; /* Webkit - transparent track */
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: oklch(0.556 0 0); /* Webkit - grey thumb using CSS variable */
+  border-radius: 3px; /* Webkit - rounded corners */
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.4 0 0); /* Webkit - darker grey on hover */
+}
+
+/* Dark mode adjustments */
+.dark .scrollbar-custom {
+  scrollbar-color: oklch(0.708 0 0) transparent; /* Firefox - lighter grey for dark mode */
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: oklch(0.708 0 0); /* Webkit - lighter grey for dark mode */
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.8 0 0); /* Webkit - even lighter grey on hover in dark mode */
 }

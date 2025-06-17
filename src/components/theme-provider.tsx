@@ -1,4 +1,6 @@
+import { useMutation } from 'convex/react'
 import { createContext, useContext, useEffect, useState } from 'react'
+import { api } from '../../convex/_generated/api'
 
 type Theme = 'dark' | 'light' | 'system'
 
@@ -30,6 +32,8 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
 
+  const setUserPreference = useMutation(api.userPreference.setUserPreference)
+
   useEffect(() => {
     const root = window.document.documentElement
 
@@ -53,6 +57,7 @@ export function ThemeProvider({
     setTheme: (theme: Theme) => {
       localStorage.setItem(storageKey, theme)
       setTheme(theme)
+      setUserPreference({ theme })
     }
   }
 

@@ -1,42 +1,53 @@
-import { ChatMessage } from '@/components/chat-message'
-import { StreamingMessage } from '@/components/streaming-message'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { useChat } from '@/context/chat-context'
-import { useCallback, useRef } from 'react'
+import { useChat } from '@/chat/chat'
+import { MessageProvider } from '@/chat/message'
+import type { Id } from 'convex/_generated/dataModel'
+import { useQuery } from 'convex/react'
+import { useEffect } from 'react'
+import { api } from '../../convex/_generated/api'
+import { ChatReplies } from './chat-replies'
+import { ChatRequests } from './chat-requests'
 
 export function ChatMessages() {
-  const { messages, currentStreamId, drivenIds, removeDrivenId } = useChat()
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const { chat, cachedChats, cacheChat, scrollToBottom } = useChat()
 
-  const scrollToBottom = useCallback(() => {
-    const scrollContainer = scrollAreaRef.current?.querySelector(
-      '[data-radix-scroll-area-viewport]'
-    )
-    if (scrollContainer) {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight
+  const messagesToFetch = useQuery(
+    api.message.getMessagesByChatId,
+    chat ? { chatId: chat._id } : 'skip'
+  )
+
+  const messages =
+    messagesToFetch ||
+    cachedChats.get(chat?._id || ('' as Id<'chat'>))?.messages ||
+    []
+
+  useEffect(() => {
+    if (!chat) return
+
+    if (messagesToFetch) {
+      cacheChat({
+        ...chat,
+        messages: messagesToFetch
+      })
     }
-  }, [])
+  }, [chat, messagesToFetch, cacheChat])
+
+  // Auto-scroll when messages are loaded or updated
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => scrollToBottom(false), 100)
+    }
+  }, [messages.length, scrollToBottom])
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="space-y-4 max-w-4xl mx-auto">
-          {messages.map((message) => (
-            <ChatMessage key={message._id} message={message} />
-          ))}
-          {currentStreamId && (
-            <StreamingMessage
-              streamId={currentStreamId}
-              shouldStream={drivenIds.has(currentStreamId)}
-              onTextUpdate={scrollToBottom}
-              onStop={() => {
-                removeDrivenId(currentStreamId)
-                scrollToBottom()
-              }}
-            />
-          )}
-        </div>
-      </ScrollArea>
+    <div className="flex-1 flex flex-col min-h-0 px-6 lg:px-0">
+      <div className="w-full max-w-3xl mx-auto relative py-4">
+        {messages?.map((message) => (
+          <MessageProvider key={message._id} message={message}>
+            <ChatRequests />
+            <ChatReplies />
+          </MessageProvider>
+        ))}
+      </div>
     </div>
   )
 }

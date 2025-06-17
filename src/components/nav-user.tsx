@@ -13,13 +13,25 @@ import {
   SidebarMenuItem,
   useSidebar
 } from '@/components/ui/sidebar'
-import { useUser } from '@clerk/clerk-react'
-import { Link } from '@tanstack/react-router'
-import { Archive, LogOut, MoreVertical, Settings, User } from 'lucide-react'
+import { useAuth, useUser } from '@clerk/clerk-react'
+import { useMutation } from '@tanstack/react-query'
+import { Link, useLocation } from '@tanstack/react-router'
+import { Loader2, LogOut, MoreVertical, Settings, User } from 'lucide-react'
+import { toast } from 'sonner'
+import { UserAvatar } from './user-avatar'
 
 export function NavUser() {
   const { isMobile } = useSidebar()
   const { user } = useUser()
+  const location = useLocation()
+  const { signOut } = useAuth()
+  const signOutMutate = useMutation({
+    mutationFn: () => signOut(),
+    onError: (error) => {
+      toast.error('Oops! Something went wrong while signing out.')
+      console.error('Sign out error:', error)
+    }
+  })
 
   if (!user) return null
 
@@ -32,11 +44,7 @@ export function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <span className="font-bold">
-                  {user.firstName?.charAt(0) || 'U'}
-                </span>
-              </div>
+              <UserAvatar />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
                   {user.fullName || 'User'}
@@ -53,11 +61,7 @@ export function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <span className="font-bold">
-                    {user.firstName?.charAt(0) || 'U'}
-                  </span>
-                </div>
+                <UserAvatar />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
                     {user.fullName || 'User'}
@@ -68,7 +72,7 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to="/settings">
+                <Link to="/account">
                   <User />
                   Account
                 </Link>
@@ -81,15 +85,17 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/settings">
-                <Archive />
-                Archived Chats
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOut />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault()
+                signOutMutate.mutate()
+              }}
+            >
+              {signOutMutate.isPending ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <LogOut />
+              )}
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

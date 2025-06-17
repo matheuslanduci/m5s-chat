@@ -1,3 +1,4 @@
+import { StreamIdValidator } from '@convex-dev/persistent-text-streaming'
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
@@ -13,16 +14,12 @@ export const category = v.union(
   v.literal('Finance'),
   v.literal('Health'),
   v.literal('Trivia'),
-  v.literal('Academia'),
-  v.literal('Other')
+  v.literal('Academia')
 )
 
 export default defineSchema({
-  bestModel: defineTable({
-    category,
-    model: v.id('model')
-  }).index('byCategory', ['category']),
   model: defineTable({
+    key: v.string(),
     name: v.string(),
     provider: v.union(
       v.literal('openai'),
@@ -30,98 +27,83 @@ export default defineSchema({
       v.literal('google'),
       v.literal('deepseek')
     ),
-    maxContextLength: v.number(),
-    supportAttachments: v.boolean(),
-    key: v.string(),
-    description: v.optional(v.string())
-  }).index('byKey', ['key']),
+    maxContextTokens: v.number(),
+    supportPDF: v.boolean(),
+    supportImage: v.boolean()
+  }),
   userPreference: defineTable({
     userId: v.string(),
-    theme: v.optional(v.string()),
-    savedPrompt: v.optional(v.string()),
+    theme: v.optional(
+      v.union(v.literal('light'), v.literal('dark'), v.literal('system'))
+    ),
     generalPrompt: v.optional(v.string()),
-    favoriteModel: v.optional(v.id('model')),
-    favoriteCategory: v.optional(category),
-    isAuto: v.optional(v.boolean()),
-    uncategorized: v.optional(v.boolean()),
-    autoSummarize: v.optional(v.boolean())
+    defaultModelSelection: v.optional(
+      v.union(v.literal('auto'), v.literal('category'), v.literal('model'))
+    ),
+    defaultModelId: v.optional(v.id('model')),
+    defaultCategory: v.optional(category),
+    byokEnabled: v.optional(v.boolean()),
+    byokKey: v.optional(v.string())
   }).index('byUserId', ['userId']),
   chat: defineTable({
-    userId: v.string(),
-    id: v.string(),
-    selectedModel: v.id('model'),
+    ownerId: v.string(),
+    clientId: v.string(),
     title: v.optional(v.string()),
     pinned: v.boolean(),
-    streamId: v.optional(v.string()),
-    contextLength: v.optional(v.number()),
-    initialPrompt: v.optional(v.string())
+    contextTokens: v.optional(v.number()),
+    initialPrompt: v.string(),
+    collaborators: v.optional(v.array(v.string())),
+    lastMessageAt: v.optional(v.number()),
+    isBranch: v.optional(v.boolean()),
+    branchOf: v.optional(v.id('chat'))
   })
-    .index('byId', ['id'])
-    .index('byUserId', ['userId'])
-    .index('byStreamIdAndUserId', ['streamId', 'userId']),
+    .index('byOwnerId', ['ownerId'])
+    .index('byClientId', ['clientId']),
   message: defineTable({
-    verticalIndex: v.number(), // For ordering messages in a chat
-    horizontalIndex: v.number(), // For ordering retried messages
     chatId: v.id('chat'),
-    userId: v.optional(v.string()),
-    role: v.union(v.literal('user'), v.literal('assistant')),
-    tokens: v.number(),
+    userId: v.string(),
+    streamId: v.optional(StreamIdValidator),
     content: v.string(),
-    status: v.union(
-      v.literal('pending'),
-      v.literal('completed'),
-      v.literal('failed'),
-      v.literal('retrying'),
-      v.literal('queued')
+    contentHistory: v.optional(
+      v.array(
+        v.object({
+          content: v.string(),
+          createdAt: v.number()
+        })
+      )
     ),
-    model: v.optional(
-      v.object({
-        id: v.optional(v.id('model')),
-        name: v.optional(v.string()),
-        provider: v.optional(
-          v.union(
+    modelId: v.optional(v.id('model')),
+    selectedResponseIndex: v.optional(v.number()),
+    responses: v.optional(
+      v.array(
+        v.object({
+          content: v.string(),
+          modelId: v.optional(v.id('model')),
+          modelName: v.optional(v.string()),
+          provider: v.union(
             v.literal('openai'),
             v.literal('anthropic'),
             v.literal('google'),
             v.literal('deepseek')
-          )
-        )
-      })
+          ),
+          tokens: v.number(),
+          createdAt: v.number()
+        })
+      )
     ),
-    attachments: v.array(v.id('attachment'))
-  }).index('byChatId', ['chatId']),
-  summary: defineTable({
-    chatId: v.id('chat'),
-    userId: v.string(),
-    automatic: v.boolean(),
-    content: v.string(),
-    tokens: v.number(),
-    from: v.id('message'),
-    to: v.id('message')
-  }).index('byChatId', ['chatId']),
+    attachments: v.optional(v.array(v.id('attachment')))
+  })
+    .index('byChatId', ['chatId'])
+    .index('byStreamId', ['streamId']),
   attachment: defineTable({
     userId: v.string(),
     storageId: v.string(),
+    name: v.string(),
     format: v.union(v.literal('image'), v.literal('pdf')),
     url: v.string()
   }).index('byUserId', ['userId']),
-  chatSharing: defineTable({
-    chatId: v.id('chat'),
-    userId: v.string(),
-    title: v.string(),
-    slug: v.string(),
-    expirationTimestamp: v.optional(v.number()),
-    password: v.optional(v.string()),
-    firstMessage: v.optional(v.id('message')),
-    lastMessage: v.optional(v.id('message'))
-  }).index('byChatId', ['chatId']),
-  chatCollaboration: defineTable({
-    chatId: v.id('chat'),
-    members: v.array(v.string())
-  }),
-  modelPrompt: defineTable({
-    modelId: v.id('model'),
-    userId: v.string(),
-    content: v.string()
-  }).index('byModelIdAndUserId', ['modelId', 'userId'])
+  bestModel: defineTable({
+    category,
+    modelId: v.id('model')
+  }).index('byCategory', ['category'])
 })

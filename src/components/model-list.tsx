@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 import { memo, useEffect, useRef, useState } from 'react'
-import type { Id } from '../../convex/_generated/dataModel'
+import type { Doc, Id } from '../../convex/_generated/dataModel'
 import {
   AnthropicIcon,
   DeepSeekIcon,
@@ -10,15 +10,8 @@ import {
   OpenAIIcon
 } from './provider-icons'
 
-interface Model {
-  _id: Id<'model'>
-  name: string
-  provider: string
-  key: string
-}
-
 interface ModelListProps {
-  models: Model[]
+  models: Doc<'model'>[]
   selectedModelId?: Id<'model'>
   onSelect: (modelId: Id<'model'>) => void
   disabled?: boolean
@@ -111,7 +104,7 @@ export const ModelList = memo(function ModelList({
             No models found
           </div>
         )}
-      </div>{' '}
+      </div>
     </div>
   )
 })

@@ -1,20 +1,19 @@
-import {
-  AnthropicIcon,
-  DeepSeekIcon,
-  GoogleIcon,
-  OpenAIIcon
-} from '@/components/provider-icons'
+import type { BasicCategory } from '@/chat/model-selection'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger
 } from '@/components/ui/hover-card'
-import type { BasicCategory } from '@/context/chat-context'
-import { useBestModels } from '@/hooks/use-best-models'
 import { Brain } from 'lucide-react'
 import { memo } from 'react'
+import {
+  AnthropicIcon,
+  DeepSeekIcon,
+  GoogleIcon,
+  OpenAIIcon
+} from './provider-icons'
 
-interface CategoryItem {
+type CategoryItem = {
   name: string
   icon: React.ComponentType<{ className?: string }>
   description: string
@@ -22,8 +21,8 @@ interface CategoryItem {
   model: string
 }
 
-interface CategoryGridProps {
-  categories?: CategoryItem[]
+type CategoryGridProps = {
+  categories: CategoryItem[]
   selectedValue?: BasicCategory
   onSelect: (category: BasicCategory) => void
   disabled?: boolean
@@ -35,13 +34,6 @@ export const CategoryGrid = memo(function CategoryGrid({
   onSelect,
   disabled = false
 }: CategoryGridProps) {
-  const { categoriesWithModels, isLoading } = useBestModels()
-
-  // Use provided categories or fall back to best models from database
-  // Only fetch from hook if no categories are provided
-  const displayCategories = categories || categoriesWithModels
-  const isDataLoading = isLoading && !categories
-
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case 'openai':
@@ -57,28 +49,11 @@ export const CategoryGrid = memo(function CategoryGrid({
     }
   }
 
-  if (isDataLoading) {
-    return (
-      <div className="grid gap-1.5 grid-cols-3 sm:grid-cols-4 md:grid-cols-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
-          <div
-            key={`loading-skeleton-${item}`}
-            className="py-1.5 px-1 sm:py-2 sm:px-1.5 rounded-md border animate-pulse bg-muted/50"
-          >
-            <div className="flex flex-col items-center gap-1 sm:gap-1.5">
-              <div className="size-4 sm:size-5 bg-muted rounded" />
-              <div className="h-3 sm:h-4 w-12 bg-muted rounded" />
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
   return (
     <div
       className={`grid gap-1.5 grid-cols-3 sm:grid-cols-4 md:grid-cols-4 ${disabled ? 'pointer-events-none opacity-60' : ''}`}
     >
-      {displayCategories.map((category) => {
+      {categories.map((category) => {
         const IconComponent = category.icon
         const ProviderIcon = getProviderIcon(category.provider)
         const isSelected = selectedValue === category.name

@@ -15,6 +15,7 @@ import type * as error from "../error.js";
 import type * as http from "../http.js";
 import type * as message from "../message.js";
 import type * as model from "../model.js";
+import type * as streaming from "../streaming.js";
 import type * as userPreference from "../userPreference.js";
 
 import type {
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   message: typeof message;
   model: typeof model;
+  streaming: typeof streaming;
   userPreference: typeof userPreference;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

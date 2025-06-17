@@ -1,16 +1,16 @@
+import { useChat } from '@/chat/chat'
 import { Button } from '@/components/ui/button'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger
 } from '@/components/ui/hover-card'
-import { useChat } from '@/context/chat-context'
+import type { Id } from 'convex/_generated/dataModel'
 import { FileImage, FileText, Loader2, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { Id } from '../../convex/_generated/dataModel'
 
-interface AttachmentPreviewProps {
+type AttachmentPreviewProps = {
   attachmentId: Id<'attachment'>
   format: 'image' | 'pdf'
   url: string
@@ -28,7 +28,9 @@ export function AttachmentPreview({
   const [isRemoving, setIsRemoving] = useState(false)
 
   const handleRemove = async (event: React.MouseEvent) => {
-    event.stopPropagation() // Prevent triggering the hover card
+    event.stopPropagation()
+    setOpen(false)
+
     try {
       setIsRemoving(true)
       await removeAttachment(attachmentId)
@@ -47,7 +49,13 @@ export function AttachmentPreview({
   }
 
   return (
-    <HoverCard open={open} onOpenChange={setOpen}>
+    <HoverCard
+      open={open}
+      onOpenChange={(val) => {
+        if (isRemoving) return
+        setOpen(val)
+      }}
+    >
       <HoverCardTrigger asChild>
         <div
           className="relative inline-flex items-center gap-2 bg-muted px-2 py-1 rounded-md border cursor-pointer hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"

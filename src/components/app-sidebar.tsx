@@ -1,17 +1,18 @@
-import { NavChats } from '@/components/nav-chats'
-import { NavUser } from '@/components/nav-user'
+import { Link } from '@tanstack/react-router'
+import { MessageCircle } from 'lucide-react'
+import { NavChatHistory } from './nav-chat-history'
+import { NavUser } from './nav-user'
+import { Button } from './ui/button'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem
-} from '@/components/ui/sidebar'
-import { Link } from '@tanstack/react-router'
-import { MessageCircle } from 'lucide-react'
-import type * as React from 'react'
+} from './ui/sidebar'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -31,8 +32,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <NavChats />
+      <SidebarContent className="flex flex-col">
+        <SidebarGroup className="flex-shrink-0">
+          <Button type="button" asChild>
+            <Link to="/">New Chat</Link>
+          </Button>
+        </SidebarGroup>
+        <div className="flex-1 overflow-auto scrollbar-hidden">
+          <NavChatHistory />
+        </div>
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

@@ -1,18 +1,5 @@
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useBestModels } from '@/hooks/use-best-models'
-import {
-  type BasicCategory,
-  useModelSelection
-} from '@/hooks/use-model-selection'
+import { type BasicCategory, useModelSelection } from '@/chat/model-selection'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   Bot,
   Brain,
@@ -32,9 +19,8 @@ import {
   Users,
   Zap
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
-import type { Id } from '../../convex/_generated/dataModel'
 import { CategoryGrid } from './category-grid'
 import { ModelList } from './model-list'
 import {
@@ -43,13 +29,13 @@ import {
   GoogleIcon,
   OpenAIIcon
 } from './provider-icons'
+import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Separator } from './ui/separator'
+import { Switch } from './ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
-interface ModelSelectorProps {
-  onClose?: () => void
-}
-
-// Category to icon mapping
 const categoryIcons = {
   Programming: Code,
   Roleplay: Users,
@@ -65,7 +51,6 @@ const categoryIcons = {
   Academia: GraduationCap
 } as const
 
-// Provider to icon mapping
 const providerIcons = {
   openai: OpenAIIcon,
   google: GoogleIcon,
@@ -73,64 +58,78 @@ const providerIcons = {
   deepseek: DeepSeekIcon
 } as const
 
+const categoryMeta = {
+  Programming: {
+    icon: Code,
+    description: 'Optimized for coding and technical tasks'
+  },
+  Roleplay: {
+    icon: Users,
+    description: 'Creative character interactions and storytelling'
+  },
+  Marketing: {
+    icon: TrendingUp,
+    description: 'Content creation and marketing strategies'
+  },
+  SEO: {
+    icon: Globe,
+    description: 'Search engine optimization and web content'
+  },
+  Technology: {
+    icon: Lightbulb,
+    description: 'Tech discussions and innovations'
+  },
+  Science: {
+    icon: Brain,
+    description: 'Scientific research and analysis'
+  },
+  Translation: {
+    icon: FileText,
+    description: 'Language translation and localization'
+  },
+  Legal: {
+    icon: Shield,
+    description: 'Legal advice and document analysis'
+  },
+  Finance: {
+    icon: DollarSign,
+    description: 'Financial planning and analysis'
+  },
+  Health: {
+    icon: Heart,
+    description: 'Health and wellness information'
+  },
+  Trivia: {
+    icon: HelpCircle,
+    description: 'Fun facts and general knowledge'
+  },
+  Academia: {
+    icon: GraduationCap,
+    description: 'Academic research and education'
+  }
+} as const
+
+type ModelSelectorProps = {
+  onClose: () => void
+}
+
 export function ModelSelector({ onClose }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const {
     selection,
-    isLoading,
-    categories,
-    models,
+    isFetching,
     setAutoMode,
     setCategoryMode,
     setModelMode,
     displayName,
-    selectedModel
+    categoriesWithModels,
+    models
   } = useModelSelection()
-  const { categoriesWithModels } = useBestModels()
-  // Get the appropriate icon based on current selection
-  const SelectionIcon = useMemo(() => {
-    if (isLoading) {
-      return Loader2
-    }
 
-    switch (selection.mode) {
-      case 'auto':
-        return Zap
-      case 'category':
-        if (selection.category && categoryIcons[selection.category]) {
-          return categoryIcons[selection.category]
-        }
-        return Bot
-      case 'model':
-        if (
-          selectedModel?.provider &&
-          providerIcons[selectedModel.provider as keyof typeof providerIcons]
-        ) {
-          return providerIcons[
-            selectedModel.provider as keyof typeof providerIcons
-          ]
-        }
-        return Bot
-      default:
-        return Bot
-    }
-  }, [selection, selectedModel, isLoading])
-
-  const resetTabs = useCallback(() => {
-    if (selection.mode === 'auto') {
-      if (isOpen) {
-        return
-      }
-
-      return setSelectedTab('basic')
-    }
-
-    return setSelectedTab(selection.mode === 'category' ? 'basic' : 'advanced')
-  }, [selection.mode, isOpen])
   const [selectedTab, setSelectedTab] = useState<'basic' | 'advanced'>(
-    selection.mode === 'auto'
+    selection.defaultModelSelection === 'auto'
       ? 'basic'
-      : selection.mode === 'category'
+      : selection.defaultModelSelection === 'category'
         ? 'basic'
         : 'advanced'
   )
@@ -142,36 +141,25 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
 
   const tooltipText = useMemo(() => {
     const baseText = `Select AI model (${shortcutKey} + L)`
-    switch (selection.mode) {
+
+    switch (selection.defaultModelSelection) {
       case 'auto':
         return `${baseText} • Auto mode active`
       case 'category':
-        return `${baseText} • Category: ${selection.category}`
+        return `${baseText} • Category: ${selection.defaultCategory}`
       case 'model':
-        return `${baseText} • Model: ${selectedModel?.name || 'Unknown'}`
+        return `${baseText} • Model: ${selection.defaultModel?.name || 'Unknown'}`
       default:
         return baseText
     }
-  }, [selection, selectedModel, shortcutKey])
-
-  useHotkeys(
-    'meta+l,ctrl+l',
-    (e) => {
-      e.preventDefault()
-      handleOpenChange(!isOpen)
-    },
-    {
-      enableOnFormTags: true,
-      enableOnContentEditable: true
-    }
-  )
+  }, [selection, shortcutKey])
 
   const handleAutoToggle = (checked: boolean) => {
     if (checked) {
       setAutoMode()
     } else {
       if (selectedTab === 'basic') {
-        const firstCategory = categories[0] as BasicCategory
+        const firstCategory = categoriesWithModels[0]?.category
 
         if (firstCategory) {
           setCategoryMode(firstCategory)
@@ -185,6 +173,55 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
       }
     }
   }
+
+  useHotkeys(
+    'meta+l,ctrl+l',
+    (e) => {
+      e.preventDefault()
+      handleOpenChange(!isOpen)
+    },
+    {
+      enableOnFormTags: true,
+      enableOnContentEditable: true
+    }
+  )
+
+  const SelectionIcon = useMemo(() => {
+    if (isFetching) {
+      return Loader2
+    }
+
+    if (!selection) {
+      return Bot
+    }
+
+    switch (selection.defaultModelSelection) {
+      case 'auto':
+        return Zap
+      case 'category':
+        if (
+          selection.defaultCategory &&
+          categoryIcons[selection.defaultCategory]
+        ) {
+          return categoryIcons[selection.defaultCategory]
+        }
+        return Bot
+      case 'model':
+        if (
+          selection.defaultModel?.provider &&
+          providerIcons[
+            selection.defaultModel.provider as keyof typeof providerIcons
+          ]
+        ) {
+          return providerIcons[
+            selection.defaultModel.provider as keyof typeof providerIcons
+          ]
+        }
+        return Bot
+      default:
+        return Bot
+    }
+  }, [selection, isFetching])
 
   const handleCategorySelect = (category: BasicCategory) => {
     setCategoryMode(category)
@@ -203,17 +240,8 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
     }
   }
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      resetTabs()
-    }, 200)
-
-    return () => clearTimeout(timeout)
-  }, [resetTabs])
-
   return (
     <>
-      {' '}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -223,16 +251,17 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
             onClick={() => setIsOpen(!isOpen)}
           >
             <SelectionIcon
-              className={`size-3 ${isLoading ? 'animate-spin' : ''}`}
+              className={`size-3 ${isFetching ? 'animate-spin' : ''}`}
             />
             <span className="flex-1 truncate">{displayName}</span>
             <ChevronDown className="size-3" />
           </Button>
-        </TooltipTrigger>{' '}
+        </TooltipTrigger>
         <TooltipContent>
           <p>{tooltipText}</p>
         </TooltipContent>
       </Tooltip>
+
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl h-[90vh] !max-h-[536px] sm:h-[80vh] sm:max-h-[80vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
@@ -242,7 +271,6 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 sm:space-y-6 py-2 sm:py-4 flex-1 overflow-y-auto min-h-0">
-            {/* Auto Mode Section */}
             <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/30 rounded-lg border">
               <div className="flex items-center gap-2 sm:gap-3">
                 <Zap className="size-4 sm:size-5 text-primary" />
@@ -254,7 +282,7 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
                 </div>
               </div>
               <Switch
-                checked={selection.mode === 'auto'}
+                checked={selection.defaultModelSelection === 'auto'}
                 onCheckedChange={handleAutoToggle}
               />
             </div>
@@ -283,7 +311,6 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
                 value="basic"
                 className="mt-4 sm:mt-6 flex-1 flex flex-col min-h-0"
               >
-                {/* Category Selection */}
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="flex items-center gap-2 mb-3 sm:mb-4 flex-shrink-0">
                     <h3 className="text-sm font-medium">Categories</h3>
@@ -293,10 +320,20 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
                   </div>
                   <div className="flex-1 overflow-y-auto min-h-0">
                     <CategoryGrid
-                      categories={categoriesWithModels}
+                      categories={categoriesWithModels.map((c) => {
+                        const meta = categoryMeta[c.category]
+
+                        return {
+                          name: c.category,
+                          icon: meta.icon,
+                          description: meta.description,
+                          provider: c.model?.provider || 'openai',
+                          model: c.model?.name || 'Unknown'
+                        }
+                      })}
                       selectedValue={
-                        selection.mode === 'category'
-                          ? selection.category
+                        selection.defaultModelSelection === 'category'
+                          ? selection.defaultCategory
                           : undefined
                       }
                       onSelect={handleCategorySelect}
@@ -319,8 +356,8 @@ export function ModelSelector({ onClose }: ModelSelectorProps) {
                     <ModelList
                       models={models}
                       selectedModelId={
-                        selection.mode === 'model'
-                          ? selection.modelId
+                        selection.defaultModelSelection === 'model'
+                          ? selection.defaultModelId
                           : undefined
                       }
                       onSelect={handleModelSelect}
