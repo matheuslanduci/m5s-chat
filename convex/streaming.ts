@@ -58,7 +58,8 @@ export const streamChat = httpAction(async (ctx, request) => {
 
   const parsed = z
     .object({
-      messageId: z.string()
+      messageId: z.string(),
+      apiKey: z.string().optional()
     })
     .safeParse(body)
 
@@ -234,9 +235,7 @@ format.`
       }
 
       const openRouter = createOpenRouter({
-        apiKey: userPreference?.byokEnabled
-          ? userPreference.byokKey || ''
-          : process.env.OPENROUTER_API_KEY
+        apiKey: parsed.data.apiKey || process.env.OPENROUTER_API_KEY
       })
 
       const stream = streamText({

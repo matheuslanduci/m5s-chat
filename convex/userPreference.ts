@@ -57,9 +57,7 @@ export const setUserPreference = mutation({
       v.union(v.literal('auto'), v.literal('category'), v.literal('model'))
     ),
     defaultModelId: v.optional(v.id('model')),
-    defaultCategory: v.optional(category),
-    byokEnabled: v.optional(v.boolean()),
-    byokKey: v.optional(v.string())
+    defaultCategory: v.optional(category)
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity()
@@ -78,10 +76,6 @@ export const setUserPreference = mutation({
         ...(args.generalPrompt !== undefined && {
           generalPrompt: args.generalPrompt
         }),
-        ...(args.byokEnabled !== undefined && {
-          byokEnabled: args.byokEnabled
-        }),
-        ...(args.byokKey !== undefined && { byokKey: args.byokKey }),
         userId: user.subject
       })
     }

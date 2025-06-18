@@ -42,9 +42,7 @@ export default defineSchema({
       v.union(v.literal('auto'), v.literal('category'), v.literal('model'))
     ),
     defaultModelId: v.optional(v.id('model')),
-    defaultCategory: v.optional(category),
-    byokEnabled: v.optional(v.boolean()),
-    byokKey: v.optional(v.string())
+    defaultCategory: v.optional(category)
   }).index('byUserId', ['userId']),
   chat: defineTable({
     ownerId: v.string(),

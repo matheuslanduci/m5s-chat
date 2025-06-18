@@ -24,8 +24,6 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
   const { getToken } = useAuth()
   const [streamEnded, setStreamEnded] = useState<boolean | null>(null)
 
-  const userPreference = useQuery(api.userPreference.getUserPreference)
-
   const streamStarted = useRef(false)
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needed.
@@ -57,7 +55,6 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
           console.error('Failed to get auth token')
           return
         }
-
         const success = await startStreaming(
           new URL(`${env.VITE_CONVEX_SITE}/chat`),
           messageId,
@@ -84,7 +81,7 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
     } else {
       status = streamEnded ? 'done' : 'error'
 
-      if (streamBody.length === 0 && userPreference?.byokEnabled) {
+      if (streamBody.length === 0) {
         toast.error(
           'Your BYOK key is invalid or not set. Please check your settings.'
         )
@@ -95,7 +92,7 @@ export function useStream({ isDriven, messageId }: UseStreamProps) {
       text: streamBody,
       status: status as StreamStatus
     }
-  }, [persistentBody, streamBody, streamEnded, userPreference?.byokEnabled])
+  }, [persistentBody, streamBody, streamEnded])
 
   return body
 }
@@ -106,10 +103,14 @@ async function startStreaming(
   onUpdate: (text: string) => void,
   headers: Record<string, string>
 ) {
+  // Get BYOK API key from localStorage
+  const byokApiKey = localStorage.getItem('byok:apikey')
+
   const response = await fetch(url, {
     method: 'POST',
     body: JSON.stringify({
-      messageId: messageId
+      messageId: messageId,
+      ...(byokApiKey && { apiKey: byokApiKey })
     }),
     headers: { 'Content-Type': 'application/json', ...headers }
   })

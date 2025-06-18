@@ -46,8 +46,6 @@ function RouteComponent() {
       toast.error('Oops! Something went wrong while saving settings.')
       console.error('Error saving user preference:', error)
       setPrompt(userPreference?.generalPrompt || '')
-      setByokEnabled(userPreference?.byokEnabled || false)
-      setByokKey(userPreference?.byokKey || '')
     }
   })
 
@@ -58,7 +56,6 @@ function RouteComponent() {
 
     return router.navigate({ to: '/' })
   }
-
   function savePrompt() {
     setUserPreferenceMutation.mutate({
       generalPrompt: prompt
@@ -66,21 +63,22 @@ function RouteComponent() {
   }
 
   function saveBYOK() {
-    setUserPreferenceMutation.mutate({
-      byokEnabled: byokEnabled,
-      byokKey: byokKey
-    })
+    localStorage.setItem('byok:apikey', byokKey)
+    toast.success('API key saved successfully')
   }
 
   useEffect(() => {
     if (userPreference?.generalPrompt) {
       setPrompt(userPreference.generalPrompt)
     }
-    if (userPreference?.byokEnabled !== undefined) {
-      setByokEnabled(userPreference.byokEnabled)
-    }
-    if (userPreference?.byokKey) {
-      setByokKey(userPreference.byokKey)
+
+    const savedByokKey = localStorage.getItem('byok:apikey')
+    if (savedByokKey) {
+      setByokKey(savedByokKey)
+      setByokEnabled(true)
+    } else {
+      setByokEnabled(false)
+      setByokKey('')
     }
   }, [userPreference])
 
@@ -145,15 +143,18 @@ function RouteComponent() {
                 <p className="text-sm text-muted-foreground">
                   Use your own API keys for AI models
                 </p>
-              </div>
+              </div>{' '}
               <Switch
                 id="byok-switch"
                 checked={byokEnabled}
                 onCheckedChange={(checked) => {
                   setByokEnabled(checked)
-                  setUserPreferenceMutation.mutate({
-                    byokEnabled: checked
-                  })
+                  if (!checked) {
+                    // Clear API key from localStorage when disabled
+                    localStorage.removeItem('byok:apikey')
+                    setByokKey('')
+                    toast.success('BYOK disabled and API key cleared')
+                  }
                 }}
               />
             </div>
