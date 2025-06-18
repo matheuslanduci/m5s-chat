@@ -20,6 +20,7 @@ export function ChatReplies() {
       modelName={response?.modelName}
       provider={response?.provider}
       responseCreationTime={response?.createdAt}
+      hideIcons={isStreaming && !response}
     >
       {!isStreaming && response ? (
         <MarkdownContent>{response.content}</MarkdownContent>

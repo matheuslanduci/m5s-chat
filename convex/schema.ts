@@ -29,7 +29,8 @@ export default defineSchema({
     ),
     maxContextTokens: v.number(),
     supportPDF: v.boolean(),
-    supportImage: v.boolean()
+    supportImage: v.boolean(),
+    supportReasoning: v.optional(v.boolean())
   }),
   userPreference: defineTable({
     userId: v.string(),
@@ -62,6 +63,7 @@ export default defineSchema({
   message: defineTable({
     chatId: v.id('chat'),
     userId: v.string(),
+    status: v.optional(v.union(v.literal('pending'), v.literal('completed'))),
     streamId: v.optional(StreamIdValidator),
     content: v.string(),
     contentHistory: v.optional(
@@ -80,6 +82,8 @@ export default defineSchema({
           content: v.string(),
           modelId: v.optional(v.id('model')),
           modelName: v.optional(v.string()),
+          reasoning: v.optional(v.string()),
+          finished: v.optional(v.boolean()),
           provider: v.union(
             v.literal('openai'),
             v.literal('anthropic'),

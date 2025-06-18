@@ -84,6 +84,7 @@ export const _addResponseToMessage = internalMutation({
     messageId: v.id('message'),
     response: v.object({
       content: v.string(),
+      reasoning: v.optional(v.string()),
       modelId: v.optional(v.id('model')),
       modelName: v.optional(v.string()),
       provider: v.union(
@@ -111,6 +112,68 @@ export const _addResponseToMessage = internalMutation({
           provider: args.response.provider,
           tokens: args.response.tokens,
           createdAt: args.response.createdAt
+        }
+      ]
+    })
+  }
+})
+
+export const _addReasoningToLastResponse = internalMutation({
+  args: {
+    messageId: v.id('message'),
+    reasoning: v.string()
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId)
+
+    if (!message) throw notFoundError
+
+    const lastResponse = message.responses?.[message.responses.length - 1]
+
+    if (!lastResponse) throw serverError
+
+    return ctx.db.patch(args.messageId, {
+      responses: [
+        ...(message.responses?.slice(0, -1) || []),
+        {
+          content: lastResponse.content,
+          modelId: lastResponse.modelId,
+          modelName: lastResponse.modelName,
+          provider: lastResponse.provider,
+          tokens: lastResponse.tokens,
+          createdAt: lastResponse.createdAt,
+          reasoning: args.reasoning
+        }
+      ]
+    })
+  }
+})
+
+export const _addContentToLastResponse = internalMutation({
+  args: {
+    messageId: v.id('message'),
+    content: v.string()
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId)
+
+    if (!message) throw notFoundError
+
+    const lastResponse = message.responses?.[message.responses.length - 1]
+
+    if (!lastResponse) throw serverError
+
+    return ctx.db.patch(args.messageId, {
+      responses: [
+        ...(message.responses?.slice(0, -1) || []),
+        {
+          content: args.content,
+          modelId: lastResponse.modelId,
+          modelName: lastResponse.modelName,
+          provider: lastResponse.provider,
+          tokens: lastResponse.tokens,
+          createdAt: lastResponse.createdAt,
+          reasoning: lastResponse.reasoning
         }
       ]
     })

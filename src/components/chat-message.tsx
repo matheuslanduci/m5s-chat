@@ -35,6 +35,7 @@ type ChatMessageProps = {
   currentRequestIndex?: number
   totalRequests?: number
   onRequestIndexChange?: (index: number) => void
+  hideIcons?: boolean
 }
 
 export function ChatMessage({
@@ -49,7 +50,8 @@ export function ChatMessage({
   responseCreationTime,
   currentRequestIndex = 0,
   totalRequests = 1,
-  onRequestIndexChange
+  onRequestIndexChange,
+  hideIcons = false
 }: ChatMessageProps) {
   const isMobile = useIsMobile()
   const {
@@ -191,77 +193,78 @@ export function ChatMessage({
               hour: '2-digit',
               minute: '2-digit'
             })}
-          </span>
-
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  disabled={isStreaming || isRetryDisabled}
-                  onClick={() => {
-                    retry()
-                  }}
-                >
-                  <RotateCcw className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>
-                  {isRetryDisabled ? 'Retry in progress...' : 'Retry message'}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-            {/* Disable Edit for a while */}
-            {/* <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  onClick={() => {
-                    if (isEditing && editingMessageId === message?._id) {
-                      setIsEditing(false, message)
-                    } else {
-                      setIsEditing(true, message)
-                    }
-                  }}
-                >
-                  <Edit className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Edit message</p>
-              </TooltipContent>
-            </Tooltip> */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(
-                        message?.content || ''
-                      )
-                      toast.success('Message copied to clipboard')
-                    } catch (err) {
-                      console.error('Failed to copy message:', err)
-                      toast.error('Failed to copy message')
-                    }
-                  }}
-                >
-                  <Copy className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Copy message</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          </span>{' '}
+          {!hideIcons && (
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    disabled={isStreaming || isRetryDisabled}
+                    onClick={() => {
+                      retry()
+                    }}
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    {isRetryDisabled ? 'Retry in progress...' : 'Retry message'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+              {/* Disable Edit for a while */}
+              {/* <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={() => {
+                      if (isEditing && editingMessageId === message?._id) {
+                        setIsEditing(false, message)
+                      } else {
+                        setIsEditing(true, message)
+                      }
+                    }}
+                  >
+                    <Edit className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Edit message</p>
+                </TooltipContent>
+              </Tooltip> */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(
+                          message?.content || ''
+                        )
+                        toast.success('Message copied to clipboard')
+                      } catch (err) {
+                        console.error('Failed to copy message:', err)
+                        toast.error('Failed to copy message')
+                      }
+                    }}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Copy message</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -352,73 +355,75 @@ export function ChatMessage({
                 hour: '2-digit',
                 minute: '2-digit'
               }
-            )}
+            )}{' '}
           </span>{' '}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  onClick={async () => {
-                    try {
-                      // For assistant messages, we need to get the current response content
-                      const contentToCopy =
-                        message?.responses?.[currentResponseIndex]?.content ||
-                        message?.content ||
-                        ''
-                      await navigator.clipboard.writeText(contentToCopy)
-                      toast.success('Message copied to clipboard')
-                    } catch (err) {
-                      console.error('Failed to copy message:', err)
-                      toast.error('Failed to copy message')
-                    }
-                  }}
-                >
-                  <Copy className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Copy message</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  onClick={() => createChatBranch(message._id)}
-                >
-                  <GitBranch className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Branch off</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  disabled={isStreaming || isRetryDisabled}
-                  onClick={() => {
-                    retry()
-                  }}
-                >
-                  <RotateCcw className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>
-                  {isRetryDisabled ? 'Retry in progress...' : 'Retry message'}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          {!hideIcons && (
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={async () => {
+                      try {
+                        // For assistant messages, we need to get the current response content
+                        const contentToCopy =
+                          message?.responses?.[currentResponseIndex]?.content ||
+                          message?.content ||
+                          ''
+                        await navigator.clipboard.writeText(contentToCopy)
+                        toast.success('Message copied to clipboard')
+                      } catch (err) {
+                        console.error('Failed to copy message:', err)
+                        toast.error('Failed to copy message')
+                      }
+                    }}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Copy message</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={() => createChatBranch(message._id)}
+                  >
+                    <GitBranch className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Branch off</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    disabled={isStreaming || isRetryDisabled}
+                    onClick={() => {
+                      retry()
+                    }}
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    {isRetryDisabled ? 'Retry in progress...' : 'Retry message'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
       </div>
     </div>

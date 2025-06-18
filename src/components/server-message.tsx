@@ -1,6 +1,7 @@
 import { useChat } from '@/chat/chat'
 import { useStream } from '@/hooks/use-stream'
 import type { Id } from 'convex/_generated/dataModel'
+import { Ellipsis } from 'lucide-react'
 import { useEffect } from 'react'
 import { MarkdownContent } from './markdown-content'
 
@@ -43,6 +44,8 @@ export function ServerMessage({
       scrollToBottom(true)
     }
   }, [text, isDriven, status, scrollToBottom])
+
+  if (!text) return <Ellipsis className="animate-pulse text-muted-foreground" />
 
   return <MarkdownContent>{text}</MarkdownContent>
 }
