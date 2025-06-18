@@ -10,3 +10,8 @@ Project of Theo's cloneathon of [T3.chat](https://t3.chat).
 - [x] - Chat branching
 - [x] - Syntax highlighting
 - [x] - Markdown support
+
+
+## License
+
+Free for personal and commercial use.
